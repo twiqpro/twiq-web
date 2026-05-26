@@ -6,7 +6,11 @@ from typing import Any, Optional
 
 from app.clients.dhanhq_client import DhanHQClient
 from app.config import Settings, get_settings
-from app.feed.binary_parser import MarketTick, OpenInterestUpdate
+from app.feed.binary_parser import (
+    MarketTick,
+    OpenInterestUpdate,
+    PreviousCloseUpdate,
+)
 from app.feed.dhan_feed import FeedInstrument, REQUEST_SUBSCRIBE_QUOTE
 from app.market.metrics_compute import (
     build_metrics_note,
@@ -95,20 +99,50 @@ class NiftyMetricsAggregator:
                 leg.security_id: (leg.strike, leg.side) for leg in boot.legs
             }
             self._dirty = True
+
+        await self._bootstrap_index_quotes()
+        async with self._lock:
             self._last_snapshot = self._build_snapshot_unlocked()
 
         logger.info(
-            "Metrics bootstrap: expiry=%s strikes=%s legs=%s",
+            "Metrics bootstrap: expiry=%s strikes=%s legs=%s vix=%s",
             chosen,
             len(boot.rows),
             len(boot.legs),
+            self.vix_ltp,
         )
 
-    async def apply_feed_event(self, event: MarketTick | OpenInterestUpdate) -> bool:
+    async def _bootstrap_index_quotes(self) -> None:
+        """Seed index LTP / prev close via REST so UI is populated before WS ticks."""
+        seg = self.settings.india_vix_exchange_segment
+        vix_id = self.settings.india_vix_security_id
+        if not vix_id:
+            return
+
+        body: dict[str, list[int]] = {seg: [int(vix_id)]}
+        try:
+            data = await self._client.get_market_ohlc(body)
+        except Exception as exc:
+            logger.warning("Index OHLC bootstrap failed: %s", exc)
+            return
+
+        ltp, prev = self._client.extract_segment_quote(data, seg, vix_id)
+        async with self._lock:
+            if ltp is not None:
+                self.vix_ltp = ltp
+            if prev is not None:
+                self.vix_prev_close = prev
+
+    async def apply_feed_event(
+        self,
+        event: MarketTick | OpenInterestUpdate | PreviousCloseUpdate,
+    ) -> bool:
         changed = False
         async with self._lock:
             if isinstance(event, OpenInterestUpdate):
                 changed = self._apply_oi_unlocked(event)
+            elif isinstance(event, PreviousCloseUpdate):
+                changed = self._apply_prev_close_unlocked(event)
             elif isinstance(event, MarketTick):
                 changed = self._apply_tick_unlocked(event)
 
@@ -138,6 +172,17 @@ class NiftyMetricsAggregator:
             row.put_oi = event.open_interest
         row.total_oi = row.call_oi + row.put_oi
         return True
+
+    def _apply_prev_close_unlocked(self, event: PreviousCloseUpdate) -> bool:
+        sid = str(event.security_id)
+        if (
+            self.settings.india_vix_security_id
+            and sid == str(self.settings.india_vix_security_id)
+            and self.vix_prev_close != event.previous_close
+        ):
+            self.vix_prev_close = event.previous_close
+            return True
+        return False
 
     def _apply_tick_unlocked(self, event: MarketTick) -> bool:
         sid = str(event.security_id)

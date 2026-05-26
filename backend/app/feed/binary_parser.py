@@ -34,7 +34,13 @@ class OpenInterestUpdate:
     open_interest: int
 
 
-FeedEvent = Union[MarketTick, OpenInterestUpdate]
+@dataclass(frozen=True)
+class PreviousCloseUpdate:
+    security_id: int
+    previous_close: float
+
+
+FeedEvent = Union[MarketTick, OpenInterestUpdate, PreviousCloseUpdate]
 
 
 def parse_header(data: bytes) -> Optional[FeedHeader]:
@@ -84,6 +90,14 @@ def parse_feed_event(data: bytes) -> Optional[FeedEvent]:
             price=float(ltp),
             volume=int(vol),
             timestamp=int(ltt),
+        )
+
+    # Previous close (sent on subscribe) — used for day change on indices
+    if header.feed_code == 6 and len(payload) >= 8:
+        prev_close = struct.unpack_from("<f", payload, 0)[0]
+        return PreviousCloseUpdate(
+            security_id=header.security_id,
+            previous_close=float(prev_close),
         )
 
     # OI-only packet (when subscribed to Quote mode on FNO)

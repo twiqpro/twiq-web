@@ -248,3 +248,37 @@ class DhanHQClient:
         }
         return await self._request("POST", "/optionchain", json_body=body)
 
+    async def get_market_ohlc(
+        self,
+        instruments: dict[str, list[int]],
+    ) -> dict[str, Any]:
+        """POST /marketfeed/ohlc — keys are exchange segments e.g. IDX_I, NSE_FNO."""
+        return await self._request("POST", "/marketfeed/ohlc", json_body=instruments)
+
+    @staticmethod
+    def extract_segment_quote(
+        data: dict[str, Any],
+        exchange_segment: str,
+        security_id: str | int,
+    ) -> tuple[Optional[float], Optional[float]]:
+        """Return (last_price, previous_close) for one instrument."""
+        payload = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(payload, dict):
+            return None, None
+        segment = payload.get(exchange_segment) or {}
+        row = segment.get(str(security_id)) or segment.get(int(security_id))  # type: ignore[arg-type]
+        if not isinstance(row, dict):
+            return None, None
+        ltp = row.get("last_price")
+        ohlc = row.get("ohlc") or {}
+        prev = ohlc.get("close") if isinstance(ohlc, dict) else None
+        try:
+            last = float(ltp) if ltp is not None else None
+        except (TypeError, ValueError):
+            last = None
+        try:
+            close = float(prev) if prev is not None else None
+        except (TypeError, ValueError):
+            close = None
+        return last, close
+

@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     # Optional live metrics (Dhan instrument master security IDs)
     nifty_futures_security_id: str = ""
     nifty_futures_exchange_segment: str = "NSE_FNO"
-    india_vix_security_id: str = ""
+    # India VIX index — Dhan SECURITY_ID 21 (NSE index segment IDX_I)
+    india_vix_security_id: str = "21"
     india_vix_exchange_segment: str = "IDX_I"
 
     redis_url: str = "redis://localhost:6379/0"
