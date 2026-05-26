@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     nifty_default_interval: str = "5M"
 
     redis_url: str = "redis://localhost:6379/0"
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origins: str = (
+        "https://twiqpro.netlify.app,"
+        "http://localhost:3000,"
+        "http://127.0.0.1:3000"
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:
