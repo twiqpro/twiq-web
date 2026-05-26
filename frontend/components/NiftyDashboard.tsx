@@ -132,7 +132,6 @@ export function NiftyDashboard(props: {
 
         <section className="flex flex-col gap-4">
           <MetricsCard {...cardProps} />
-          <MetricsCard {...cardProps} />
         </section>
 
         <section className="w-full rounded-2xl bg-[#12171d] p-6">
