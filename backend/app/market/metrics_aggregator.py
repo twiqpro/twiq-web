@@ -13,14 +13,17 @@ from app.feed.binary_parser import (
 )
 from app.feed.dhan_feed import FeedInstrument, REQUEST_SUBSCRIBE_QUOTE
 from app.market.metrics_compute import (
+    apply_oi_changes_to_rows,
     build_metrics_note,
     compute_atm_iv,
     compute_max_pain,
+    compute_oi_interval_changes,
     compute_oi_support_resistance,
     compute_pcr,
     format_expiry_label,
     pcr_sentiment,
 )
+from app.market.oi_history import OiHistoryStore, StrikeOiSnapshot
 from app.market.option_chain import (
     OptionChainBootstrap,
     parse_option_chain_response,
@@ -49,6 +52,8 @@ class NiftyMetricsAggregator:
         self._bootstrap: Optional[OptionChainBootstrap] = None
         self._dirty = False
         self._last_snapshot: Optional[NiftyMetricsSnapshot] = None
+        self._oi_history = OiHistoryStore()
+        self._oi_interval: str = "15M"
 
     @property
     def feed_instruments(self) -> list[FeedInstrument]:
@@ -102,7 +107,8 @@ class NiftyMetricsAggregator:
 
         await self._bootstrap_index_quotes()
         async with self._lock:
-            self._last_snapshot = self._build_snapshot_unlocked()
+            self._record_oi_history_unlocked()
+            self._last_snapshot = self._build_snapshot_unlocked(self._oi_interval)
 
         logger.info(
             "Metrics bootstrap: expiry=%s strikes=%s legs=%s vix=%s",
@@ -148,11 +154,38 @@ class NiftyMetricsAggregator:
 
             if changed:
                 self._dirty = True
-                self._last_snapshot = self._build_snapshot_unlocked()
+                self._last_snapshot = self._build_snapshot_unlocked(self._oi_interval)
         return changed
 
-    def get_snapshot(self) -> Optional[NiftyMetricsSnapshot]:
+    def set_oi_interval(self, interval: str) -> None:
+        self._oi_interval = interval.upper()
+
+    async def record_oi_history_snapshot_async(self) -> None:
+        async with self._lock:
+            self._record_oi_history_unlocked()
+
+    def _record_oi_history_unlocked(self) -> None:
+        if not self._rows_by_strike:
+            return
+        payload = {
+            strike: StrikeOiSnapshot(call_oi=row.call_oi, put_oi=row.put_oi)
+            for strike, row in self._rows_by_strike.items()
+        }
+        self._oi_history.record(payload)
+
+    def get_snapshot(
+        self,
+        oi_interval: Optional[str] = None,
+    ) -> Optional[NiftyMetricsSnapshot]:
+        if oi_interval:
+            self._oi_interval = oi_interval.upper()
         return self._last_snapshot
+
+    def rebuild_snapshot(self, oi_interval: Optional[str] = None) -> None:
+        if oi_interval:
+            self._oi_interval = oi_interval.upper()
+        snap = self._build_snapshot_unlocked(self._oi_interval)
+        self._last_snapshot = snap
 
     def _apply_oi_unlocked(self, event: OpenInterestUpdate) -> bool:
         mapping = self._leg_map.get(event.security_id)
@@ -239,8 +272,13 @@ class NiftyMetricsAggregator:
 
         return changed
 
-    def _build_snapshot_unlocked(self) -> NiftyMetricsSnapshot:
+    def _build_snapshot_unlocked(self, oi_interval: str = "15M") -> NiftyMetricsSnapshot:
         rows = sorted(self._rows_by_strike.values(), key=lambda r: r.strike)
+        changes_map, history_ready = compute_oi_interval_changes(
+            self._oi_history,
+            rows,
+        )
+        rows = apply_oi_changes_to_rows(rows, changes_map)
         spot = self.spot or (rows[0].strike if rows else 0.0)
         pcr = compute_pcr(rows)
         sentiment = pcr_sentiment(pcr)
@@ -266,6 +304,8 @@ class NiftyMetricsAggregator:
             atm_iv=atm_iv,
             max_pain=max_pain,
             strikes=rows,
+            oi_interval=oi_interval.upper(),
+            oi_history_ready=history_ready,
             note=build_metrics_note(
                 atm_iv=atm_iv,
                 india_vix=self.vix_ltp,
@@ -275,8 +315,10 @@ class NiftyMetricsAggregator:
             ),
         )
 
-    def snapshot_dict(self) -> dict[str, Any]:
-        snap = self.get_snapshot()
+    def snapshot_dict(self, oi_interval: Optional[str] = None) -> dict[str, Any]:
+        if oi_interval:
+            self.rebuild_snapshot(oi_interval)
+        snap = self._last_snapshot
         if not snap:
             return {}
         return snap.model_dump()

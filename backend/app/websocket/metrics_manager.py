@@ -9,6 +9,7 @@ from fastapi import WebSocket
 from app.feed.dhan_feed import DhanFeedClient, REQUEST_SUBSCRIBE_QUOTE
 from app.feed.binary_parser import FeedEvent
 from app.market.metrics_aggregator import NiftyMetricsAggregator
+from app.market.oi_intervals import SNAPSHOT_INTERVAL_SEC
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,17 @@ class NiftyMetricsConnectionManager:
         self._aggregator = NiftyMetricsAggregator()
         self._feed_task: Optional[asyncio.Task[None]] = None
         self._broadcast_task: Optional[asyncio.Task[None]] = None
+        self._history_task: Optional[asyncio.Task[None]] = None
         self._feed_client: Optional[DhanFeedClient] = None
         self._lock = asyncio.Lock()
         self._bootstrapped = False
 
-    async def connect(self, websocket: WebSocket, expiry: Optional[str] = None) -> None:
+    async def connect(
+        self,
+        websocket: WebSocket,
+        expiry: Optional[str] = None,
+        oi_interval: Optional[str] = None,
+    ) -> None:
         await websocket.accept()
         async with self._lock:
             if websocket not in self.clients:
@@ -36,8 +43,11 @@ class NiftyMetricsConnectionManager:
             if not self._bootstrapped:
                 await self._aggregator.bootstrap(expiry=expiry)
                 self._bootstrapped = True
+            elif oi_interval:
+                self._aggregator.set_oi_interval(oi_interval)
+                self._aggregator.rebuild_snapshot(oi_interval)
 
-            snap = self._aggregator.get_snapshot()
+            snap = self._aggregator.get_snapshot(oi_interval)
             if snap:
                 await websocket.send_json(
                     {
@@ -51,6 +61,8 @@ class NiftyMetricsConnectionManager:
                 self._feed_task = asyncio.create_task(self._run_feed())
             if self._broadcast_task is None or self._broadcast_task.done():
                 self._broadcast_task = asyncio.create_task(self._broadcast_loop())
+            if self._history_task is None or self._history_task.done():
+                self._history_task = asyncio.create_task(self._history_loop())
 
     async def disconnect(self, websocket: WebSocket) -> None:
         async with self._lock:
@@ -63,6 +75,9 @@ class NiftyMetricsConnectionManager:
                 if self._broadcast_task:
                     self._broadcast_task.cancel()
                     self._broadcast_task = None
+                if self._history_task:
+                    self._history_task.cancel()
+                    self._history_task = None
                 if self._feed_client:
                     await self._feed_client.disconnect()
                     self._feed_client = None
@@ -72,9 +87,15 @@ class NiftyMetricsConnectionManager:
             await self._aggregator.bootstrap(expiry=expiry)
             self._bootstrapped = True
 
-    async def get_snapshot(self, expiry: Optional[str] = None) -> dict[str, Any]:
+    async def get_snapshot(
+        self,
+        expiry: Optional[str] = None,
+        oi_interval: Optional[str] = None,
+    ) -> dict[str, Any]:
         await self.ensure_bootstrapped(expiry=expiry)
-        return self._aggregator.snapshot_dict()
+        if oi_interval:
+            self._aggregator.rebuild_snapshot(oi_interval)
+        return self._aggregator.snapshot_dict(oi_interval)
 
     async def broadcast(self, message: dict[str, Any]) -> None:
         dead: list[WebSocket] = []
@@ -88,6 +109,17 @@ class NiftyMetricsConnectionManager:
 
     async def _on_feed_event(self, event: FeedEvent) -> None:
         await self._aggregator.apply_feed_event(event)
+
+    async def _history_loop(self) -> None:
+        try:
+            while True:
+                await asyncio.sleep(SNAPSHOT_INTERVAL_SEC)
+                if not self._bootstrapped:
+                    continue
+                await self._aggregator.record_oi_history_snapshot_async()
+                self._aggregator.rebuild_snapshot()
+        except asyncio.CancelledError:
+            pass
 
     async def _broadcast_loop(self) -> None:
         try:

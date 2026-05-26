@@ -55,9 +55,14 @@ async def websocket_nifty(
 async def websocket_metrics(
     websocket: WebSocket,
     expiry: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    oi_interval: str = Query("15M", description="1M, 5M, 15M, 30M, 1H, 4H"),
 ) -> None:
     try:
-        await nifty_metrics_manager.connect(websocket, expiry=expiry)
+        await nifty_metrics_manager.connect(
+            websocket,
+            expiry=expiry,
+            oi_interval=oi_interval,
+        )
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:

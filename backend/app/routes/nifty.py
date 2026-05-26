@@ -66,9 +66,13 @@ async def nifty_historical(
 @router.get("/metrics", response_model=NiftyMetricsSnapshot)
 async def nifty_metrics(
     expiry: Optional[str] = Query(None, description="YYYY-MM-DD; nearest if omitted"),
+    oi_interval: str = Query("15M", description="1M, 5M, 15M, 30M, 1H, 4H"),
 ) -> NiftyMetricsSnapshot:
     try:
-        data = await metrics_manager.get_snapshot(expiry=expiry)
+        data = await metrics_manager.get_snapshot(
+            expiry=expiry,
+            oi_interval=oi_interval,
+        )
         if not data:
             raise HTTPException(status_code=503, detail="Metrics not ready")
         return NiftyMetricsSnapshot.model_validate(data)

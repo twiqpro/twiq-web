@@ -2,6 +2,7 @@
 
 import { MetricsCard } from "@/components/MetricsCard";
 import { NiftyChartLite } from "@/components/Chart/NiftyChartLite";
+import { OpenInterestPanel } from "@/components/OpenInterest/OpenInterestPanel";
 import { useNiftyMetrics } from "@/hooks/useNiftyMetrics";
 import type { OIProfileStrike } from "@/lib/chartTypes";
 
@@ -89,11 +90,8 @@ const PLACEHOLDER = metricsToCards({
   note: "Loading live NIFTY metrics…",
 });
 
-export function NiftyDashboard(props: {
-  imgOpenInterest: string;
-  imgAiSpark: string;
-}) {
-  const { imgOpenInterest, imgAiSpark } = props;
+export function NiftyDashboard(props: { imgAiSpark: string }) {
+  const { imgAiSpark } = props;
   const { metrics, error } = useNiftyMetrics();
 
   const cardProps = metrics ? metricsToCards(metrics) : PLACEHOLDER;
@@ -120,14 +118,15 @@ export function NiftyDashboard(props: {
               resistanceLevel={metrics?.oi_resistance}
             />
           </div>
-          <div className="overflow-hidden rounded-b-md">
-            <img
-              alt="Open interest"
-              src={imgOpenInterest}
-              className="block h-[419px] w-full object-cover"
-              draggable={false}
-            />
-          </div>
+          <OpenInterestPanel
+            strikes={oiStrikesAll}
+            spot={metrics?.spot}
+            supportLevel={metrics?.oi_support}
+            resistanceLevel={metrics?.oi_resistance}
+            expiryLabel={metrics?.expiry_label}
+            historyReady={metrics?.oi_history_ready}
+            height={419}
+          />
         </section>
 
         <section className="flex flex-col gap-4">

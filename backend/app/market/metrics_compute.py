@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable, Optional
 
-from app.models.metrics import OIStrikeRow
+from app.market.oi_history import OiHistoryStore, StrikeOiSnapshot
+from app.market.oi_intervals import OI_INTERVAL_KEYS, OI_INTERVAL_MINUTES
+from app.models.metrics import OIStrikeRow, StrikeOiChange
 
 
 def format_expiry_label(expiry_iso: str) -> str:
@@ -108,6 +110,65 @@ def compute_atm_iv(rows: Iterable[OIStrikeRow], spot: float) -> Optional[float]:
         if best is None or dist < best[0]:
             best = (dist, iv)
     return round(best[1], 1) if best else None
+
+
+def compute_oi_interval_changes(
+    history: OiHistoryStore,
+    rows: Iterable[OIStrikeRow],
+    *,
+    now_ts: int | None = None,
+) -> tuple[dict[float, dict[str, StrikeOiChange]], bool]:
+    """Per-interval OI delta vs snapshot at (now - interval)."""
+    from time import time as _time
+
+    now = int(now_ts if now_ts is not None else _time())
+    oldest = history.oldest_ts
+    history_ready = oldest is not None and (now - oldest) >= 60
+
+    changes_by_strike: dict[float, dict[str, StrikeOiChange]] = {
+        row.strike: {} for row in rows
+    }
+
+    for key in OI_INTERVAL_KEYS:
+        minutes = OI_INTERVAL_MINUTES[key]
+        lookback = now - minutes * 60
+        past = history.lookup_at(lookback)
+        if past is None:
+            for row in rows:
+                changes_by_strike[row.strike][key] = StrikeOiChange()
+            continue
+
+        for row in rows:
+            prev = past.get(row.strike)
+            if prev is None:
+                changes_by_strike[row.strike][key] = StrikeOiChange()
+                continue
+            changes_by_strike[row.strike][key] = StrikeOiChange(
+                call_oi_change=row.call_oi - prev.call_oi,
+                put_oi_change=row.put_oi - prev.put_oi,
+            )
+
+    return changes_by_strike, history_ready
+
+
+def apply_oi_changes_to_rows(
+    rows: list[OIStrikeRow],
+    changes_by_strike: dict[float, dict[str, StrikeOiChange]],
+) -> list[OIStrikeRow]:
+    out: list[OIStrikeRow] = []
+    for row in rows:
+        interval_map = changes_by_strike.get(row.strike, {})
+        out.append(
+            row.model_copy(
+                update={
+                    "oi_changes": {
+                        k: interval_map.get(k, StrikeOiChange())
+                        for k in OI_INTERVAL_KEYS
+                    }
+                }
+            )
+        )
+    return out
 
 
 def build_metrics_note(

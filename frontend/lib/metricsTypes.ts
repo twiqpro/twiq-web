@@ -1,3 +1,4 @@
+import type { ChartIntervalKey } from "./intervals";
 import type { OIProfileStrike } from "./chartTypes";
 
 export type NiftyMetrics = {
@@ -15,8 +16,12 @@ export type NiftyMetrics = {
   atm_iv: number | null;
   max_pain: number | null;
   strikes: OIProfileStrike[];
+  oi_interval: string;
+  oi_history_ready: boolean;
   note: string;
 };
+
+export type { ChartIntervalKey };
 
 export type MetricsWsMessage =
   | { type: "metrics_snapshot"; symbol: string; metrics: NiftyMetrics }

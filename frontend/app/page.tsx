@@ -2,8 +2,6 @@ import { NiftyDashboard } from "@/components/NiftyDashboard";
 import { TwiqTopNav } from "@/components/TwiqTopNav";
 
 export default function Home() {
-  const imgOpenInterest =
-    "https://www.figma.com/api/mcp/asset/182ed1ed-6103-4be1-ad73-4f5340376ca1";
   const imgAiSpark =
     "https://www.figma.com/api/mcp/asset/1abb13a4-5090-4a50-a657-be440d42375f";
 
@@ -33,10 +31,7 @@ export default function Home() {
         <div className="relative z-10">
           <TwiqTopNav />
 
-          <NiftyDashboard
-            imgOpenInterest={imgOpenInterest}
-            imgAiSpark={imgAiSpark}
-          />
+          <NiftyDashboard imgAiSpark={imgAiSpark} />
         </div>
       </div>
     </div>

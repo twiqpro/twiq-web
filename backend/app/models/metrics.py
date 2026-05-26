@@ -5,6 +5,11 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class StrikeOiChange(BaseModel):
+    call_oi_change: Optional[int] = None
+    put_oi_change: Optional[int] = None
+
+
 class OIStrikeRow(BaseModel):
     strike: float
     call_oi: int = 0
@@ -14,6 +19,7 @@ class OIStrikeRow(BaseModel):
     put_ltp: Optional[float] = None
     ce_iv: Optional[float] = None
     pe_iv: Optional[float] = None
+    oi_changes: dict[str, StrikeOiChange] = Field(default_factory=dict)
 
 
 class NiftyMetricsSnapshot(BaseModel):
@@ -31,4 +37,6 @@ class NiftyMetricsSnapshot(BaseModel):
     atm_iv: Optional[float] = None
     max_pain: Optional[float] = None
     strikes: list[OIStrikeRow] = Field(default_factory=list)
+    oi_interval: str = "15M"
+    oi_history_ready: bool = False
     note: str = ""
