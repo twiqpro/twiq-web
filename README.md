@@ -39,11 +39,13 @@ Copy env files and add **API key + secret** from [web.dhan.co](https://web.dhan.
 | `DHANHQ_CLIENT_ID`    | Your Dhan client ID                                                                                         |
 | `DHANHQ_REDIRECT_URL` | Must match redirect URL registered with the API key (default: `http://localhost:8000/api/auth/dhan/callback`) |
 
-**One-time login** (after Phase 2 — backend auth is implemented):
+**One-time login** (required for realtime chart):
 
 1. Open http://localhost:8000/api/auth/dhan/login
 2. Sign in on Dhan's page
 3. After redirect, the access token is saved to `backend/.dhan_token.json` (~24h validity)
+
+After login, the chart loads **real historical candles** from `GET /api/nifty/historical` and updates live over `WS /ws/nifty`.
 
 ### 2. Redis (optional)
 
