@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the feature you'd like to see in TWIQ Web.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What problem does this solve, or what value does it add?
+      placeholder: Traders need to compare NIFTY spot vs futures on one chart...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should this work from a user perspective?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Related roadmap phase
+      options:
+        - Phase 2 — DhanHQ REST
+        - Phase 3 — Charting
+        - Phase 4 — EMA
+        - Phase 5 — Volume & OI
+        - Phase 6–7 — WebSocket realtime
+        - Phase 8 — WebView bridge
+        - Phase 9–10 — Deploy & QA
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative approaches you've thought about?
+    validations:
+      required: false

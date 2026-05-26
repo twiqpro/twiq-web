@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.Python
+
+# Environment
+.env
+.env.local
+backend/.dhan_token.json
+.env.*.local
+!.env.example
+!**/.env.example
+
+# Build / cache
+.next/
+out/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+htmlcov/
+.coverage
+coverage/
