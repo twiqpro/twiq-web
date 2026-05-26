@@ -9,6 +9,8 @@ services:
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.11"
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
