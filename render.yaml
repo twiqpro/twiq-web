@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: twiq-backend
+    runtime: python
+    rootDir: backend
+    plan: starter
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      # Set these in Render dashboard as Secrets (token is ~24h in manual mode)
+      - key: DHANHQ_ACCESS_TOKEN
+        sync: false
+      - key: DHANHQ_CLIENT_ID
+        sync: false
+      # Update this to your deployed frontend URL(s) once known.
+      - key: CORS_ORIGINS
+        value: http://localhost:3000,http://127.0.0.1:3000
+
