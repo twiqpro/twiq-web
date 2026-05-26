@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -52,7 +54,7 @@ async def websocket_nifty(
 @app.websocket("/ws/metrics")
 async def websocket_metrics(
     websocket: WebSocket,
-    expiry: str | None = Query(None, description="YYYY-MM-DD"),
+    expiry: Optional[str] = Query(None, description="YYYY-MM-DD"),
 ) -> None:
     try:
         await nifty_metrics_manager.connect(websocket, expiry=expiry)
