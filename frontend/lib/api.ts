@@ -1,5 +1,6 @@
 import { config } from "./config";
 import type { ChartCandle } from "./chartTypes";
+import type { NiftyMetrics } from "./metricsTypes";
 
 export type HealthResponse = {
   status: string;
@@ -56,4 +57,18 @@ export async function fetchNiftyHistorical(params: {
     close: c.close,
     volume: c.volume,
   }));
+}
+
+export async function fetchNiftyMetrics(
+  expiry?: string,
+): Promise<NiftyMetrics> {
+  const qs = expiry ? `?${new URLSearchParams({ expiry })}` : "";
+  const response = await fetch(`${config.apiUrl}/api/nifty/metrics${qs}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Metrics failed: ${response.status}`);
+  }
+  return response.json() as Promise<NiftyMetrics>;
 }

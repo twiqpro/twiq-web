@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     nifty_instrument: str = "INDEX"
     nifty_default_interval: str = "5M"
 
+    # Optional live metrics (Dhan instrument master security IDs)
+    nifty_futures_security_id: str = ""
+    nifty_futures_exchange_segment: str = "NSE_FNO"
+    india_vix_security_id: str = ""
+    india_vix_exchange_segment: str = "IDX_I"
+
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = (
         "https://twiqpro.netlify.app,"

@@ -1,10 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
 
 from app.auth.dhanhq_oauth import DhanHQAuthError
 from app.clients.dhanhq_client import DhanHQClient
 from app.clients.exceptions import DhanHQAPIError
 from app.config import get_settings
 from app.models.market import HistoricalDataResponse
+from app.models.metrics import NiftyMetricsSnapshot
+from app.websocket.metrics_manager import metrics_manager
 
 router = APIRouter(prefix="/api/nifty", tags=["NIFTY"])
 settings = get_settings()
@@ -57,4 +61,21 @@ async def nifty_historical(
         candles=candles,
         count=len(candles),
     )
+
+
+@router.get("/metrics", response_model=NiftyMetricsSnapshot)
+async def nifty_metrics(
+    expiry: Optional[str] = Query(None, description="YYYY-MM-DD; nearest if omitted"),
+) -> NiftyMetricsSnapshot:
+    try:
+        data = await metrics_manager.get_snapshot(expiry=expiry)
+        if not data:
+            raise HTTPException(status_code=503, detail="Metrics not ready")
+        return NiftyMetricsSnapshot.model_validate(data)
+    except DhanHQAuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except DhanHQAPIError as exc:
+        raise HTTPException(status_code=exc.status_code or 502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 

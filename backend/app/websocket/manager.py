@@ -6,7 +6,8 @@ from typing import Any, Optional
 
 from fastapi import WebSocket
 
-from app.feed.dhan_feed import DhanFeedClient
+from app.feed.binary_parser import MarketTick
+from app.feed.dhan_feed import DhanFeedClient, FeedInstrument, REQUEST_SUBSCRIBE_TICKER
 from app.indicators.candle_aggregator import CandleAggregator
 from app.market.nifty import get_nifty_instrument
 
@@ -71,7 +72,10 @@ class NiftyConnectionManager:
         for ws in dead:
             await self.disconnect(ws)
 
-    async def _on_tick(self, tick: Any) -> None:
+    async def _on_feed_event(self, event: Any) -> None:
+        if not isinstance(event, MarketTick):
+            return
+        tick = event
         if not self._aggregator:
             return
 
@@ -104,7 +108,7 @@ class NiftyConnectionManager:
     async def _run_feed(self) -> None:
         try:
             nifty = await get_nifty_instrument()
-            self._feed_client = DhanFeedClient(nifty)
+            self._feed_client = DhanFeedClient()
             await self.broadcast(
                 {
                     "type": "status",
@@ -114,7 +118,17 @@ class NiftyConnectionManager:
                     "exchange_segment": nifty.exchange_segment,
                 }
             )
-            await self._feed_client.run_with_reconnect(self._on_tick)
+            instruments = [
+                FeedInstrument(
+                    exchange_segment=nifty.exchange_segment,
+                    security_id=str(nifty.security_id),
+                )
+            ]
+            await self._feed_client.run_with_reconnect(
+                self._on_feed_event,
+                instruments=instruments,
+                request_code=REQUEST_SUBSCRIBE_TICKER,
+            )
         except asyncio.CancelledError:
             pass
         except Exception as exc:

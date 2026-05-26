@@ -220,3 +220,31 @@ class DhanHQClient:
             candles = candles[-limit:]
         return candles
 
+    async def get_option_expiries(
+        self,
+        underlying_scrip: str | int,
+        underlying_seg: str,
+    ) -> list[str]:
+        body = {
+            "UnderlyingScrip": int(underlying_scrip),
+            "UnderlyingSeg": underlying_seg,
+        }
+        data = await self._request("POST", "/optionchain/expirylist", json_body=body)
+        payload = data.get("data") if isinstance(data, dict) else None
+        if isinstance(payload, list):
+            return [str(x) for x in payload]
+        return []
+
+    async def get_option_chain(
+        self,
+        underlying_scrip: str | int,
+        underlying_seg: str,
+        expiry: str,
+    ) -> dict[str, Any]:
+        body = {
+            "UnderlyingScrip": int(underlying_scrip),
+            "UnderlyingSeg": underlying_seg,
+            "Expiry": expiry,
+        }
+        return await self._request("POST", "/optionchain", json_body=body)
+

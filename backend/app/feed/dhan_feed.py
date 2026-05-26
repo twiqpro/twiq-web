@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional
 from urllib.parse import urlencode
 
@@ -11,28 +12,36 @@ from websockets.client import WebSocketClientProtocol
 
 from app.auth.dhanhq_oauth import DhanHQAuthError, DhanHQOAuth
 from app.config import Settings, get_settings
-from app.feed.binary_parser import MarketTick, parse_tick
+from app.feed.binary_parser import FeedEvent, parse_feed_event
 from app.market.nifty import NiftyInstrument
 
 logger = logging.getLogger(__name__)
 
-OnTickCallback = Callable[[MarketTick], Awaitable[None]]
+OnFeedEventCallback = Callable[[FeedEvent], Awaitable[None]]
 
-# Per docs: JSON request; binary responses.
+# Dhan v2 feed request codes
 REQUEST_SUBSCRIBE_TICKER = 15
+REQUEST_SUBSCRIBE_QUOTE = 17
+REQUEST_SUBSCRIBE_FULL = 21
 REQUEST_DISCONNECT = 12
+
+MAX_INSTRUMENTS_PER_MESSAGE = 100
+
+
+@dataclass(frozen=True)
+class FeedInstrument:
+    exchange_segment: str
+    security_id: str
 
 
 class DhanFeedClient:
-    """Single-connection client to DhanHQ live market feed."""
+    """Client for DhanHQ live market feed (multi-instrument, batched subscribe)."""
 
     def __init__(
         self,
-        instrument: NiftyInstrument,
         settings: Optional[Settings] = None,
         oauth: Optional[DhanHQOAuth] = None,
     ) -> None:
-        self.instrument = instrument
         self.settings = settings or get_settings()
         self.oauth = oauth or DhanHQOAuth(self.settings)
         self._ws: Optional[WebSocketClientProtocol] = None
@@ -59,28 +68,50 @@ class DhanFeedClient:
         self._ws = await websockets.connect(url, ping_interval=20, ping_timeout=40)
         logger.info("Connected to Dhan live feed")
 
-    async def subscribe_ticker(self) -> None:
+    async def subscribe(
+        self,
+        instruments: list[FeedInstrument],
+        *,
+        request_code: int = REQUEST_SUBSCRIBE_QUOTE,
+    ) -> None:
         if not self._ws:
             raise RuntimeError("WebSocket not connected")
+        if not instruments:
+            return
 
-        payload = {
-            "RequestCode": REQUEST_SUBSCRIBE_TICKER,
-            "InstrumentCount": 1,
-            "InstrumentList": [
-                {
-                    "ExchangeSegment": self.instrument.exchange_segment,
-                    "SecurityId": str(self.instrument.security_id),
-                }
-            ],
-        }
-        await self._ws.send(json.dumps(payload))
+        for i in range(0, len(instruments), MAX_INSTRUMENTS_PER_MESSAGE):
+            chunk = instruments[i : i + MAX_INSTRUMENTS_PER_MESSAGE]
+            payload = {
+                "RequestCode": request_code,
+                "InstrumentCount": len(chunk),
+                "InstrumentList": [
+                    {
+                        "ExchangeSegment": inst.exchange_segment,
+                        "SecurityId": str(inst.security_id),
+                    }
+                    for inst in chunk
+                ],
+            }
+            await self._ws.send(json.dumps(payload))
+
         logger.info(
-            "Subscribed ticker feed: %s / %s",
-            self.instrument.exchange_segment,
-            self.instrument.security_id,
+            "Subscribed %s instruments (request_code=%s)",
+            len(instruments),
+            request_code,
         )
 
-    async def listen(self, on_tick: OnTickCallback) -> None:
+    async def subscribe_ticker(self, instrument: NiftyInstrument) -> None:
+        await self.subscribe(
+            [
+                FeedInstrument(
+                    exchange_segment=instrument.exchange_segment,
+                    security_id=str(instrument.security_id),
+                )
+            ],
+            request_code=REQUEST_SUBSCRIBE_TICKER,
+        )
+
+    async def listen(self, on_event: OnFeedEventCallback) -> None:
         if not self._ws:
             raise RuntimeError("WebSocket not connected")
 
@@ -90,9 +121,9 @@ class DhanFeedClient:
                 message = await self._ws.recv()
                 if isinstance(message, str):
                     continue
-                tick = parse_tick(message)
-                if tick:
-                    await on_tick(tick)
+                event = parse_feed_event(message)
+                if event:
+                    await on_event(event)
             except websockets.ConnectionClosed:
                 logger.warning("Dhan feed connection closed")
                 break
@@ -110,14 +141,20 @@ class DhanFeedClient:
                 pass
             self._ws = None
 
-    async def run_with_reconnect(self, on_tick: OnTickCallback) -> None:
+    async def run_with_reconnect(
+        self,
+        on_event: OnFeedEventCallback,
+        *,
+        instruments: list[FeedInstrument],
+        request_code: int = REQUEST_SUBSCRIBE_QUOTE,
+    ) -> None:
         delay = 2.0
         self._running = True
         while self._running:
             try:
                 await self.connect()
-                await self.subscribe_ticker()
-                await self.listen(on_tick)
+                await self.subscribe(instruments, request_code=request_code)
+                await self.listen(on_event)
             except DhanHQAuthError:
                 raise
             except Exception as exc:
@@ -129,4 +166,3 @@ class DhanFeedClient:
                 break
             await asyncio.sleep(delay)
             delay = min(delay * 2, 60)
-

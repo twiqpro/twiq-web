@@ -1,5 +1,4 @@
-import { MetricsCard } from "@/components/MetricsCard";
-import { NiftyChartLite } from "@/components/Chart/NiftyChartLite";
+import { NiftyDashboard } from "@/components/NiftyDashboard";
 import { TwiqTopNav } from "@/components/TwiqTopNav";
 
 export default function Home() {
@@ -34,93 +33,10 @@ export default function Home() {
         <div className="relative z-10">
           <TwiqTopNav />
 
-          <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,670px)_345px_345px] lg:gap-6">
-              <section className="flex flex-col gap-4">
-                <div className="h-[415px] w-full">
-                  <NiftyChartLite height={415} />
-                </div>
-                <div className="overflow-hidden rounded-b-md">
-                  <img
-                    alt="Open interest"
-                    src={imgOpenInterest}
-                    className="block h-[419px] w-full object-cover"
-                    draggable={false}
-                  />
-                </div>
-              </section>
-
-              <section className="flex flex-col gap-4">
-                <MetricsCard
-                  pcrLabel="PCR : 0.5 (Bearish)"
-                  expiryLabel="Expiry : 26th June"
-                  columns={[
-                    [
-                      { label: "Nifty Spot", value: "23450" },
-                      { label: "OI Support", value: "23450" },
-                      {
-                        label: "India Vix",
-                        value: "19.3",
-                        delta: { value: "+1.3", tone: "red" },
-                      },
-                    ],
-                    [
-                      { label: "Nifty Futures", value: "23450" },
-                      { label: "OI Resistance", value: "23450" },
-                      {
-                        label: "ATM IV",
-                        value: "13.8",
-                        delta: { value: "+1.3", tone: "red" },
-                      },
-                    ],
-                    [{ label: "Max Pain", value: "25670" }],
-                  ]}
-                  note={
-                    "“ATM IV at 13 suggests option premiums are moderately priced.\n\nIndia VIX at 17 indicates slightly elevated volatility expectations.\n\nMarket remains cautious with chances of small-medium bounce near support.\nTrend stays weak below resistance.”"
-                  }
-                />
-
-                <MetricsCard
-                  pcrLabel="PCR : 0.5 (Bearish)"
-                  expiryLabel="Expiry : 26th June"
-                  columns={[
-                    [
-                      { label: "Nifty Spot", value: "23450" },
-                      { label: "OI Support", value: "23450" },
-                      {
-                        label: "India Vix",
-                        value: "19.3",
-                        delta: { value: "+1.3", tone: "red" },
-                      },
-                    ],
-                    [
-                      { label: "Nifty Futures", value: "23450" },
-                      { label: "OI Resistance", value: "23450" },
-                      {
-                        label: "ATM IV",
-                        value: "13.8",
-                        delta: { value: "+1.3", tone: "red" },
-                      },
-                    ],
-                    [{ label: "Max Pain", value: "25670" }],
-                  ]}
-                  note={
-                    "“ATM IV at 13 suggests option premiums are moderately priced.\n\nIndia VIX at 17 indicates slightly elevated volatility expectations.\n\nMarket remains cautious with chances of small-medium bounce near support.\nTrend stays weak below resistance.”"
-                  }
-                />
-              </section>
-
-              <section className="w-full rounded-2xl bg-[#12171d] p-6">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-md bg-[linear-gradient(90deg,rgb(235,47,150)_0%,rgb(133,27,85)_100%)] px-3 py-1.5 text-sm font-medium"
-                >
-                  <img alt="" src={imgAiSpark} className="h-4 w-4" />
-                  AI Insights
-                </button>
-              </section>
-            </div>
-          </main>
+          <NiftyDashboard
+            imgOpenInterest={imgOpenInterest}
+            imgAiSpark={imgAiSpark}
+          />
         </div>
       </div>
     </div>

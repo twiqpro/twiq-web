@@ -64,8 +64,20 @@ function makeMockOI(strikeCenter: number): { strikes: OIProfileStrike[] } {
   return { strikes };
 }
 
-export function NiftyChartLite(props: { height?: number }) {
-  const { height = 415 } = props;
+export function NiftyChartLite(props: {
+  height?: number;
+  oiStrikes?: OIProfileStrike[];
+  spot?: number;
+  supportLevel?: number | null;
+  resistanceLevel?: number | null;
+}) {
+  const {
+    height = 415,
+    oiStrikes: oiStrikesProp,
+    spot: spotProp,
+    supportLevel: supportProp,
+    resistanceLevel: resistanceProp,
+  } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -80,18 +92,26 @@ export function NiftyChartLite(props: { height?: number }) {
 
   const [candles, setCandles] = useState<ChartCandle[]>(() => defaultCandles());
   const last = candles[candles.length - 1];
-  const oi = useMemo(
-    () => makeMockOI(Math.round((last?.close ?? 23450) / 25) * 25),
-    [last?.close],
-  );
-  const oiStrikes50 = useMemo(
-    () => oi.strikes.filter((s) => s.strike % 50 === 0),
-    [oi.strikes],
-  );
-  const oiLevels = useMemo(
-    () => computeOiSupportResistance(oi.strikes, last?.close ?? 0),
-    [oi.strikes, last?.close],
-  );
+  const oiStrikes50 = useMemo(() => {
+    if (oiStrikesProp && oiStrikesProp.length > 0) {
+      return oiStrikesProp;
+    }
+    return makeMockOI(Math.round((last?.close ?? 23450) / 25) * 25).strikes.filter(
+      (s) => s.strike % 50 === 0,
+    );
+  }, [oiStrikesProp, last?.close]);
+
+  const oiLevels = useMemo(() => {
+    if (supportProp != null || resistanceProp != null) {
+      return { support: supportProp ?? null, resistance: resistanceProp ?? null };
+    }
+    const spot = spotProp ?? last?.close ?? 0;
+    const allStrikes =
+      oiStrikesProp && oiStrikesProp.length > 0
+        ? oiStrikesProp
+        : makeMockOI(Math.round(spot / 25) * 25).strikes;
+    return computeOiSupportResistance(allStrikes, spot);
+  }, [oiStrikesProp, spotProp, last?.close, supportProp, resistanceProp]);
 
   useEffect(() => {
     const el = containerRef.current;

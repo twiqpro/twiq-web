@@ -5,6 +5,7 @@ from app.config import get_settings
 from app.routes import nifty
 from app.clients.dhanhq_client import DhanHQClient
 from app.websocket.manager import manager as nifty_ws_manager
+from app.websocket.metrics_manager import metrics_manager as nifty_metrics_manager
 
 settings = get_settings()
 
@@ -39,6 +40,26 @@ async def websocket_nifty(
             await websocket.receive_text()
     except WebSocketDisconnect:
         await nifty_ws_manager.disconnect(websocket)
+    except Exception as exc:  # pragma: no cover
+        try:
+            await websocket.send_json(
+                {"type": "error", "symbol": "NIFTY", "message": str(exc)}
+            )
+        finally:
+            await websocket.close()
+
+
+@app.websocket("/ws/metrics")
+async def websocket_metrics(
+    websocket: WebSocket,
+    expiry: str | None = Query(None, description="YYYY-MM-DD"),
+) -> None:
+    try:
+        await nifty_metrics_manager.connect(websocket, expiry=expiry)
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await nifty_metrics_manager.disconnect(websocket)
     except Exception as exc:  # pragma: no cover
         try:
             await websocket.send_json(
