@@ -7,7 +7,7 @@ import type { OIProfileStrike } from "@/lib/chartTypes";
 const CALL_COLOR = "#ef5350";
 const PUT_COLOR = "#26a69a";
 const OI_SUPPORT_COLOR = "#26a69a";
-const OI_RESISTANCE_COLOR = "#f48fb1";
+const OI_RESISTANCE_COLOR = "#ef5350";
 const CHART_BG = "#121212";
 const OI_STRIP_PADDING = 6;
 const BAR_HEIGHT = 6;

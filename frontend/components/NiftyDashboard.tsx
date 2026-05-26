@@ -123,6 +123,8 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
             spot={metrics?.spot}
             supportLevel={metrics?.oi_support}
             resistanceLevel={metrics?.oi_resistance}
+            maxPain={metrics?.max_pain}
+            pcr={metrics?.pcr}
             expiryLabel={metrics?.expiry_label}
             historyReady={metrics?.oi_history_ready}
             height={419}

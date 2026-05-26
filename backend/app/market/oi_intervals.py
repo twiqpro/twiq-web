@@ -1,10 +1,19 @@
 from __future__ import annotations
 
-OI_INTERVAL_KEYS: tuple[str, ...] = ("1M", "5M", "15M", "30M", "1H", "4H")
+OI_INTERVAL_KEYS: tuple[str, ...] = (
+    "1M",
+    "5M",
+    "10M",
+    "15M",
+    "30M",
+    "1H",
+    "4H",
+)
 
 OI_INTERVAL_MINUTES: dict[str, int] = {
     "1M": 1,
     "5M": 5,
+    "10M": 10,
     "15M": 15,
     "30M": 30,
     "1H": 60,
