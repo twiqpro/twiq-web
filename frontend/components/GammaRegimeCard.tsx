@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { InformationCircleIcon } from "@heroicons/react/24/solid";
 
 import type { GammaEstimate } from "@/lib/metricsTypes";
 
@@ -79,10 +79,11 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
     aboveConcentration + belowConcentration > 0
       ? (belowConcentration / (aboveConcentration + belowConcentration)) * 100
       : null);
-  const insights = gamma?.insights?.length
-    ? gamma.insights
-    : ["Estimated gamma unavailable due to incomplete option-chain inputs."];
   const proInsights = useMemo(() => {
+    const fallbackInsights =
+      gamma?.insights?.length && gamma.insights.length > 0
+        ? gamma.insights
+        : ["Estimated gamma unavailable due to incomplete option-chain inputs."];
     const points: string[] = [];
     if (flipZone != null && flipDistancePoints != null) {
       points.push(
@@ -112,7 +113,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
         "Gamma regime has changed intraday, indicating the current stabilizing or weakening influence is less stable than earlier in session.",
       );
     }
-    if (!points.length) return insights;
+    if (!points.length) return fallbackInsights;
     return points.slice(0, 5);
   }, [
     derivedNegativeStrikes,
@@ -120,7 +121,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
     flipDistancePoints,
     flipZone,
     gamma?.spot,
-    insights,
+    gamma?.insights,
     regimeChangedIntraday,
   ]);
 

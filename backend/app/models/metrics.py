@@ -57,6 +57,35 @@ class GammaEstimate(BaseModel):
     insights: list[str] = Field(default_factory=list)
 
 
+class PriceOiSample(BaseModel):
+    timestamp: int
+    spot: float
+    total_call_oi: int
+    total_put_oi: int
+    near_atm_call_oi: int
+    near_atm_put_oi: int
+    support_put_oi: Optional[int] = None
+    resistance_call_oi: Optional[int] = None
+
+
+class PriceOiDivergence(BaseModel):
+    state: str = "No Clear Divergence"
+    confidence: str = "Low"
+    status: str = "unavailable"
+    window_minutes_used: int = 15
+    summary: str = "Divergence signal unavailable."
+    price_change_points: Optional[float] = None
+    price_change_percent: Optional[float] = None
+    total_call_oi_change: Optional[int] = None
+    total_put_oi_change: Optional[int] = None
+    near_atm_call_oi_change: Optional[int] = None
+    near_atm_put_oi_change: Optional[int] = None
+    support_zone_oi_change: Optional[int] = None
+    resistance_zone_oi_change: Optional[int] = None
+    insights: list[str] = Field(default_factory=list)
+    samples: list[PriceOiSample] = Field(default_factory=list)
+
+
 class NiftyMetricsSnapshot(BaseModel):
     symbol: str = "NIFTY"
     expiry: str
@@ -75,4 +104,5 @@ class NiftyMetricsSnapshot(BaseModel):
     oi_interval: str = "15M"
     oi_history_ready: bool = False
     gamma_estimate: GammaEstimate = Field(default_factory=GammaEstimate)
+    price_oi_divergence: PriceOiDivergence = Field(default_factory=PriceOiDivergence)
     note: str = ""

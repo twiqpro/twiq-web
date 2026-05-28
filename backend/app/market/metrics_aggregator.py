@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from time import time
 from typing import Any, Optional
 
 from app.clients.dhanhq_client import DhanHQClient
@@ -20,6 +21,7 @@ from app.market.metrics_compute import (
     compute_max_pain,
     compute_oi_interval_changes,
     compute_oi_support_resistance,
+    compute_price_oi_divergence,
     compute_pcr,
     format_expiry_label,
     pcr_sentiment,
@@ -30,6 +32,7 @@ from app.market.option_chain import (
     parse_option_chain_response,
     pick_nearest_expiry,
 )
+from app.market.price_oi_divergence import PriceOiDivergenceStore, PriceOiSnapshot
 from app.models.metrics import NiftyMetricsSnapshot, OIStrikeRow
 
 logger = logging.getLogger(__name__)
@@ -58,6 +61,7 @@ class NiftyMetricsAggregator:
         self._dirty = False
         self._last_snapshot: Optional[NiftyMetricsSnapshot] = None
         self._oi_history = OiHistoryStore()
+        self._price_oi_store = PriceOiDivergenceStore()
         self._oi_interval: str = "15M"
         self._prev_gamma_regime: Optional[str] = None
         self._gamma_regime_changed_intraday: bool = False
@@ -118,6 +122,7 @@ class NiftyMetricsAggregator:
         await self._bootstrap_index_quotes()
         async with self._lock:
             self._record_oi_history_unlocked()
+            self._record_price_oi_snapshot_unlocked()
             self._last_snapshot = self._build_snapshot_unlocked(self._oi_interval)
 
         logger.info(
@@ -234,6 +239,7 @@ class NiftyMetricsAggregator:
     async def record_oi_history_snapshot_async(self) -> None:
         async with self._lock:
             self._record_oi_history_unlocked()
+            self._record_price_oi_snapshot_unlocked()
 
     def _record_oi_history_unlocked(self) -> None:
         if not self._rows_by_strike:
@@ -243,6 +249,42 @@ class NiftyMetricsAggregator:
             for strike, row in self._rows_by_strike.items()
         }
         self._oi_history.record(payload)
+
+    def _record_price_oi_snapshot_unlocked(self) -> None:
+        rows = list(self._rows_by_strike.values())
+        if not rows:
+            return
+        spot = self.spot or (rows[0].strike if rows else 0.0)
+        total_call_oi = sum(row.call_oi for row in rows)
+        total_put_oi = sum(row.put_oi for row in rows)
+
+        near_band = max(spot * 0.01, 200.0)
+        near_rows = [row for row in rows if abs(row.strike - spot) <= near_band]
+        near_atm_call_oi = sum(row.call_oi for row in near_rows)
+        near_atm_put_oi = sum(row.put_oi for row in near_rows)
+
+        support, resistance = compute_oi_support_resistance(rows, spot)
+        support_put_oi = None
+        resistance_call_oi = None
+        if support is not None:
+            support_row = self._rows_by_strike.get(support)
+            support_put_oi = support_row.put_oi if support_row else None
+        if resistance is not None:
+            resistance_row = self._rows_by_strike.get(resistance)
+            resistance_call_oi = resistance_row.call_oi if resistance_row else None
+
+        self._price_oi_store.record(
+            PriceOiSnapshot(
+                timestamp=int(time()),
+                spot=spot,
+                total_call_oi=total_call_oi,
+                total_put_oi=total_put_oi,
+                near_atm_call_oi=near_atm_call_oi,
+                near_atm_put_oi=near_atm_put_oi,
+                support_put_oi=support_put_oi,
+                resistance_call_oi=resistance_call_oi,
+            )
+        )
 
     def get_snapshot(
         self,
@@ -376,6 +418,10 @@ class NiftyMetricsAggregator:
                 gamma_estimate.regime_changed_intraday = True
             self._prev_gamma_regime = current_gamma_regime
 
+        price_oi_divergence = compute_price_oi_divergence(
+            samples=self._price_oi_store.recent(120),
+        )
+
         return NiftyMetricsSnapshot(
             expiry=self.expiry,
             expiry_label=format_expiry_label(self.expiry) if self.expiry else "",
@@ -393,6 +439,7 @@ class NiftyMetricsAggregator:
             oi_interval=oi_interval.upper(),
             oi_history_ready=history_ready,
             gamma_estimate=gamma_estimate,
+            price_oi_divergence=price_oi_divergence,
             note=build_metrics_note(
                 atm_iv=atm_iv,
                 india_vix=self.vix_ltp,

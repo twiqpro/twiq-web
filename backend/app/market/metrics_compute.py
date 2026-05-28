@@ -7,10 +7,13 @@ from zoneinfo import ZoneInfo
 
 from app.market.oi_history import OiHistoryStore, StrikeOiSnapshot
 from app.market.oi_intervals import OI_INTERVAL_KEYS, OI_INTERVAL_MINUTES
+from app.market.price_oi_divergence import PriceOiSnapshot
 from app.models.metrics import (
     GammaEstimate,
     GammaStrikeContribution,
     OIStrikeRow,
+    PriceOiDivergence,
+    PriceOiSample,
     StrikeOiChange,
 )
 
@@ -517,4 +520,207 @@ def compute_estimated_gamma(
         regime_changed_intraday=regime_changed_intraday,
         strike_contributions=contribution_rows,
         insights=insights,
+    )
+
+
+def compute_price_oi_divergence(
+    *,
+    samples: list[PriceOiSnapshot],
+) -> PriceOiDivergence:
+    if len(samples) < 5:
+        return PriceOiDivergence(
+            status="unavailable",
+            state="No Clear Divergence",
+            confidence="Low",
+            summary="Building divergence signal from live price and OI samples.",
+            samples=[
+                PriceOiSample(
+                    timestamp=s.timestamp,
+                    spot=round(s.spot, 2),
+                    total_call_oi=s.total_call_oi,
+                    total_put_oi=s.total_put_oi,
+                    near_atm_call_oi=s.near_atm_call_oi,
+                    near_atm_put_oi=s.near_atm_put_oi,
+                    support_put_oi=s.support_put_oi,
+                    resistance_call_oi=s.resistance_call_oi,
+                )
+                for s in samples[-20:]
+            ],
+        )
+
+    now = samples[-1].timestamp
+
+    def get_past(minutes: int) -> Optional[PriceOiSnapshot]:
+        target = now - minutes * 60
+        for item in reversed(samples):
+            if item.timestamp <= target:
+                return item
+        return None
+
+    base = get_past(15)
+    window_minutes = 15
+    if base is None:
+        base = get_past(30)
+        window_minutes = 30
+    if base is None:
+        return PriceOiDivergence(
+            status="unavailable",
+            state="No Clear Divergence",
+            confidence="Low",
+            window_minutes_used=window_minutes,
+            summary="Insufficient rolling history for divergence classification.",
+        )
+
+    latest = samples[-1]
+    price_change = latest.spot - base.spot
+    price_change_pct = (price_change / base.spot) * 100 if base.spot else 0.0
+
+    call_change = latest.total_call_oi - base.total_call_oi
+    put_change = latest.total_put_oi - base.total_put_oi
+    near_call_change = latest.near_atm_call_oi - base.near_atm_call_oi
+    near_put_change = latest.near_atm_put_oi - base.near_atm_put_oi
+    support_change = (
+        (latest.support_put_oi - base.support_put_oi)
+        if latest.support_put_oi is not None and base.support_put_oi is not None
+        else None
+    )
+    resistance_change = (
+        (latest.resistance_call_oi - base.resistance_call_oi)
+        if latest.resistance_call_oi is not None and base.resistance_call_oi is not None
+        else None
+    )
+
+    tiny_price_move = abs(price_change_pct) < 0.08
+    low_oi_motion = abs(near_call_change) + abs(near_put_change) < 5_000
+    if tiny_price_move or low_oi_motion:
+        return PriceOiDivergence(
+            state="No Clear Divergence",
+            confidence="Low",
+            status="low_confidence",
+            window_minutes_used=window_minutes,
+            summary="Price and near-ATM OI changes are too small for a reliable divergence signal.",
+            price_change_points=round(price_change, 2),
+            price_change_percent=round(price_change_pct, 3),
+            total_call_oi_change=call_change,
+            total_put_oi_change=put_change,
+            near_atm_call_oi_change=near_call_change,
+            near_atm_put_oi_change=near_put_change,
+            support_zone_oi_change=support_change,
+            resistance_zone_oi_change=resistance_change,
+            insights=[
+                "No clear divergence detected because recent price and near-spot OI movement is limited.",
+                "Signal confidence is low while positioning pressure remains muted.",
+            ],
+            samples=[
+                PriceOiSample(
+                    timestamp=s.timestamp,
+                    spot=round(s.spot, 2),
+                    total_call_oi=s.total_call_oi,
+                    total_put_oi=s.total_put_oi,
+                    near_atm_call_oi=s.near_atm_call_oi,
+                    near_atm_put_oi=s.near_atm_put_oi,
+                    support_put_oi=s.support_put_oi,
+                    resistance_call_oi=s.resistance_call_oi,
+                )
+                for s in samples[-20:]
+            ],
+        )
+
+    price_up = price_change > 0
+    near_put_build = near_put_change > 0
+    near_call_build = near_call_change > 0
+    total_put_build = put_change > 0
+    total_call_build = call_change > 0
+
+    if price_up and near_put_build and not near_call_build:
+        state = "Confirmed Upmove"
+        summary = "Price is rising with supportive near-ATM put-side positioning."
+        confidence = "High"
+    elif (not price_up) and near_call_build and not near_put_build:
+        state = "Confirmed Downmove"
+        summary = "Price is falling with rising near-ATM call-side pressure."
+        confidence = "High"
+    elif price_up and near_call_build and not near_put_build:
+        state = "Weak Upmove"
+        summary = "Price is rising, but near-ATM call-side buildup suggests weaker confirmation."
+        confidence = "Medium"
+    elif (not price_up) and near_put_build and not near_call_build:
+        state = "Weak Downmove"
+        summary = "Price is falling, but near-ATM put-side buildup suggests weaker downside confirmation."
+        confidence = "Medium"
+    elif (not price_up) and total_call_build and near_call_build:
+        state = "Short Buildup Pressure"
+        summary = "Call-side OI is building as price softens, indicating pressure is strengthening."
+        confidence = "Medium"
+    elif price_up and (not total_call_build) and (not total_put_build):
+        state = "Covering-Led Move"
+        summary = "Price rise appears covering-led as broad OI unwinds."
+        confidence = "Medium"
+    elif (price_up and near_call_build and near_put_build) or (
+        (not price_up) and near_call_build and near_put_build
+    ):
+        state = "Divergent Drift"
+        summary = "Near-ATM OI is conflicted while price trends, indicating mixed positioning."
+        confidence = "Low"
+    else:
+        state = "No Clear Divergence"
+        summary = "No stable divergence state is detected from current price and OI behavior."
+        confidence = "Low"
+
+    insights: list[str] = []
+    if state in {"Weak Upmove", "Weak Downmove", "Divergent Drift"}:
+        insights.append(
+            "Price and near-ATM OI behavior is conflicted, which suggests confirmation is weakening."
+        )
+    else:
+        insights.append(
+            "Price and near-ATM OI direction shows stronger agreement, indicating better move confirmation."
+        )
+    if abs(near_put_change) > abs(put_change) * 0.6 or abs(near_call_change) > abs(call_change) * 0.6:
+        insights.append(
+            "Near-ATM OI is moving faster than total OI, indicating local strike pressure is driving the signal."
+        )
+    if support_change is not None and resistance_change is not None:
+        if price_up and resistance_change > 0:
+            insights.append(
+                "Resistance-zone call OI is building while price rises, which indicates overhead pressure is still active."
+            )
+        elif (not price_up) and support_change > 0:
+            insights.append(
+                "Support-zone put OI is building while price falls, which suggests downside confirmation may be contested."
+            )
+    if state == "Covering-Led Move":
+        insights.append(
+            "Current move appears covering-led rather than fresh positioning-led."
+        )
+    insights = insights[:4] if insights else ["No clear divergence detected between price and OI behavior."]
+
+    return PriceOiDivergence(
+        state=state,
+        confidence=confidence,
+        status="ok" if confidence != "Low" else "low_confidence",
+        window_minutes_used=window_minutes,
+        summary=summary,
+        price_change_points=round(price_change, 2),
+        price_change_percent=round(price_change_pct, 3),
+        total_call_oi_change=call_change,
+        total_put_oi_change=put_change,
+        near_atm_call_oi_change=near_call_change,
+        near_atm_put_oi_change=near_put_change,
+        support_zone_oi_change=support_change,
+        resistance_zone_oi_change=resistance_change,
+        insights=insights,
+        samples=[
+            PriceOiSample(
+                timestamp=s.timestamp,
+                spot=round(s.spot, 2),
+                total_call_oi=s.total_call_oi,
+                total_put_oi=s.total_put_oi,
+                near_atm_call_oi=s.near_atm_call_oi,
+                near_atm_put_oi=s.near_atm_put_oi,
+                support_put_oi=s.support_put_oi,
+                resistance_call_oi=s.resistance_call_oi,
+            )
+            for s in samples[-20:]
+        ],
     )

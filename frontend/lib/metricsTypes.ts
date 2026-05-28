@@ -52,6 +52,22 @@ export type NiftyMetrics = {
   oi_interval: string;
   oi_history_ready: boolean;
   gamma_estimate: GammaEstimate;
+  price_oi_divergence: {
+    state: string;
+    confidence: string;
+    status: string;
+    window_minutes_used: number;
+    summary: string;
+    price_change_points: number | null;
+    price_change_percent: number | null;
+    total_call_oi_change: number | null;
+    total_put_oi_change: number | null;
+    near_atm_call_oi_change: number | null;
+    near_atm_put_oi_change: number | null;
+    support_zone_oi_change: number | null;
+    resistance_zone_oi_change: number | null;
+    insights: string[];
+  };
   note: string;
 };
 

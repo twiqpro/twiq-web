@@ -4,6 +4,7 @@ import { MetricsCard } from "@/components/MetricsCard";
 import { NiftyChartLite } from "@/components/Chart/NiftyChartLite";
 import { OpenInterestPanel } from "@/components/OpenInterest/OpenInterestPanel";
 import { GammaRegimeCard } from "@/components/GammaRegimeCard";
+import { PriceOiDivergenceCard } from "@/components/PriceOiDivergenceCard";
 import { useNiftyMetrics } from "@/hooks/useNiftyMetrics";
 import type { OIProfileStrike } from "@/lib/chartTypes";
 
@@ -135,6 +136,7 @@ export function NiftyDashboard() {
 
         <section className="flex flex-col gap-4">
           <MetricsCard {...cardProps} />
+          <PriceOiDivergenceCard divergence={metrics?.price_oi_divergence} />
         </section>
 
         <section>
