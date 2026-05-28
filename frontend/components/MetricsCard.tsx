@@ -53,7 +53,7 @@ export function MetricsCard(props: {
     .filter(Boolean);
 
   return (
-    <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
+    <section className="w-full rounded-[8px] border border-white/10 bg-[#121212] p-4 text-white">
       <h2 className="text-[18px] font-semibold leading-none tracking-tight text-white/95">
         Option Insights
       </h2>

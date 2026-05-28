@@ -110,8 +110,8 @@ export function NiftyDashboard() {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,670px)_345px_345px] lg:gap-4">
-        <section className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-[12px] lg:grid-cols-[minmax(0,670px)_345px_345px] lg:gap-[12px]">
+        <section className="flex flex-col gap-[12px]">
           <div className="h-[415px] w-full">
             <NiftyChartLite
               height={415}
@@ -134,7 +134,7 @@ export function NiftyDashboard() {
           />
         </section>
 
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-[12px]">
           <MetricsCard {...cardProps} />
           <PriceOiDivergenceCard divergence={metrics?.price_oi_divergence} />
         </section>

@@ -375,7 +375,7 @@ export function NiftyChartLite(props: {
   }, [series, interval]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-xl border border-white/10 bg-[#121212]">
+    <div className="relative h-full w-full overflow-hidden rounded-[8px] border border-white/10 bg-[#121212]">
       <div className="absolute inset-x-0 top-0 z-30">
         <ChartToolbar
           title="Nifty 50"

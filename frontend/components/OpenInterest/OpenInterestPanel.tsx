@@ -70,7 +70,7 @@ export function OpenInterestPanel(props: {
 
   return (
     <div
-      className="flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#121212] text-white"
+      className="flex w-full flex-col overflow-hidden rounded-[8px] border border-white/10 bg-[#121212] text-white"
       style={{ height }}
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">

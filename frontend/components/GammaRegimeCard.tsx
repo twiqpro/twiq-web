@@ -148,7 +148,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
   const regimeMeaning = `${regimeText} ${directionText}`;
 
   return (
-    <section className="flex w-full flex-col gap-4 rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
+    <section className="flex w-full flex-col gap-4 rounded-[8px] border border-white/10 bg-[#121212] p-4 text-white">
       <header className="flex items-start gap-3 text-left">
         <div className="inline-flex items-center gap-1.5">
           <h2 className="text-[18px] font-semibold leading-none tracking-tight text-white/95">
@@ -174,10 +174,10 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
 
       <div className="space-y-3">
         <div className="inline-flex items-center gap-1.5">
-          <p className="text-[17px] font-semibold leading-6">
+          <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
             {regime} Gamma {status === "unavailable" ? "" : "·"}{" "}
             {status === "unavailable" ? "Unavailable" : direction}
-          </p>
+          </span>
           <span className="group relative inline-flex">
             <button
               type="button"
