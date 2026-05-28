@@ -128,7 +128,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
   const regimeMeaning = `${regimeText} ${directionText}`;
 
   return (
-    <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
+    <section className="flex w-full flex-col gap-4 rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
       <header className="flex items-start gap-3 text-left">
         <div className="inline-flex items-center gap-1.5">
           <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
@@ -152,7 +152,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
         </span>
       </header>
 
-      <div className="mt-3">
+      <div className="space-y-3">
         <div className="inline-flex items-center gap-1.5">
           <p className="text-[17px] font-semibold leading-6">
             {regime} Gamma {status === "unavailable" ? "" : "·"}{" "}
@@ -171,7 +171,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
             </span>
           </span>
         </div>
-        <div className="mt-1 grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-[12px] text-white/65">Flip Zone</p>
             <p className="text-sm font-extrabold text-white/95">
@@ -224,7 +224,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
           </p>
         </div>
       </div>
-      <div className="space-y-1.5 text-[12px] leading-5 text-white/90">
+      <div className="space-y-2 text-[12px] leading-5 text-white/90">
         <div className="flex items-start gap-1.5">
           <p>
             <span className="font-semibold text-emerald-300">Positive Gamma:</span>{" "}
@@ -251,7 +251,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
             </span>
           </span>
         </div>
-        <div className="mt-1 flex items-start gap-1.5">
+        <div className="flex items-start gap-1.5">
           <p>
             <span className="font-semibold text-rose-300">Negative Gamma:</span>{" "}
             <span className="text-white/90">
@@ -279,9 +279,9 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
         </div>
       </div>
 
-      <div className="my-3 h-px w-full bg-white/10" />
+      <div className="h-px w-full bg-white/10" />
 
-      <div className="mb-1 inline-flex items-center gap-1.5">
+      <div className="inline-flex items-center gap-1.5">
         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#b5004e]/20 text-[#f472b6]">
           <SparklesIcon className="h-3.5 w-3.5" />
         </span>
@@ -295,14 +295,14 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
 
       <button
         type="button"
-        className="mt-3 rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
+        className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
         onClick={() => setShowBreakdown((v) => !v)}
       >
         {showBreakdown ? "Hide Strike Breakdown" : "View Strike Breakdown"}
       </button>
 
       {showBreakdown ? (
-        <div className="mt-3 max-h-60 overflow-auto rounded-lg border border-white/10">
+        <div className="max-h-60 overflow-auto rounded-lg border border-white/10">
           <table className="w-full border-collapse text-[11px]">
             <thead className="bg-white/5 text-white/70">
               <tr>
