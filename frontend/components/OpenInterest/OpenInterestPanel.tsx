@@ -70,14 +70,14 @@ export function OpenInterestPanel(props: {
 
   return (
     <div
-      className="flex w-full flex-col overflow-hidden rounded-2xl bg-[#121212] text-white"
+      className="flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#121212] text-white"
       style={{ height }}
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
         <div>
           <h2 className="text-lg font-semibold leading-tight">Open Interest</h2>
           {expiryLabel ? (
-            <p className="mt-0.5 text-xs text-white/55">Expiry: {expiryLabel}</p>
+            <p className="mt-0.5 text-xs text-white/65">Expiry: {expiryLabel}</p>
           ) : null}
         </div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs text-white/80">
@@ -118,7 +118,7 @@ export function OpenInterestPanel(props: {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-white/10 px-3 py-2 text-[10px] text-white/70">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-white/10 px-3 py-2 text-[10px] text-white/75">
         <span className="inline-flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-[#ef5350]" />
           Call OI
@@ -152,7 +152,7 @@ export function OpenInterestPanel(props: {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 py-2.5">
-        <span className="text-xs text-white/55">Last:</span>
+        <span className="text-xs text-white/65">Last:</span>
         {OI_PANEL_INTERVALS.map((tf) => {
           const active = tf.key === interval;
           return (
@@ -162,8 +162,8 @@ export function OpenInterestPanel(props: {
               onClick={() => setInterval(tf.key)}
               className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 active
-                  ? "border-2 border-white bg-white/10 text-white"
-                  : "border border-transparent bg-white/5 text-white/75 hover:bg-white/10"
+                  ? "border border-[#b5004e]/60 bg-[#b5004e]/20 text-white"
+                  : "border border-transparent bg-white/5 text-white/80 hover:bg-white/10"
               }`}
             >
               {tf.label}

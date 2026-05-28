@@ -137,10 +137,10 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
           <MetricsCard {...cardProps} />
         </section>
 
-        <section className="w-full rounded-2xl bg-[#121212] p-6">
+        <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-md bg-[linear-gradient(90deg,rgb(235,47,150)_0%,rgb(133,27,85)_100%)] px-3 py-1.5 text-sm font-medium"
+            className="inline-flex items-center gap-2 rounded-md border border-[#b5004e]/60 bg-[linear-gradient(90deg,rgba(235,47,150,0.95)_0%,rgba(133,27,85,0.95)_100%)] px-3 py-1.5 text-sm font-medium"
           >
             <img alt="" src={imgAiSpark} className="h-4 w-4" />
             AI Insights

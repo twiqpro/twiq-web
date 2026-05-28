@@ -33,7 +33,7 @@ export function MetricsCard(props: {
     .filter(Boolean);
 
   return (
-    <section className="w-full rounded-2xl bg-[#121212] p-6 text-white">
+    <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
       <header className="flex items-center justify-between gap-4">
         <div className="inline-flex items-center gap-1.5">
           <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
@@ -61,7 +61,7 @@ export function MetricsCard(props: {
             </span>
           </span>
         </div>
-        <span className="text-xs opacity-90">{expiryLabel}</span>
+        <span className="text-xs text-white/95">{expiryLabel}</span>
       </header>
 
       <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
@@ -69,7 +69,7 @@ export function MetricsCard(props: {
           <div key={colIdx} className="space-y-4">
             {col.map((stat) => (
               <div key={stat.label}>
-                <p className="text-[12px] opacity-80">{stat.label}</p>
+                <p className="text-[12px] text-white/85">{stat.label}</p>
                 <p className="text-sm font-extrabold">
                   {stat.value}{" "}
                   {stat.delta ? (

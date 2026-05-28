@@ -23,7 +23,7 @@ export function ChartToolbar(props: {
   } = props;
 
   return (
-    <div className="flex h-12 w-full items-center justify-between bg-[#121212] px-4 text-white">
+    <div className="flex h-12 w-full items-center justify-between border-b border-white/10 bg-[#121212] px-4 text-white">
       <div className="text-lg font-semibold">{title}</div>
 
       <div className="flex items-center gap-4">
@@ -37,8 +37,8 @@ export function ChartToolbar(props: {
                 onClick={() => onIntervalChange(tf.key)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   active
-                    ? "border-2 border-white bg-white/10 text-white"
-                    : "border border-transparent bg-white/5 text-white/75 hover:bg-white/10"
+                    ? "border border-[#b5004e]/60 bg-[#b5004e]/20 text-white"
+                    : "border border-transparent bg-white/5 text-white/80 hover:bg-white/10"
                 }`}
               >
                 {tf.label}
