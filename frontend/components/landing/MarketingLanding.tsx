@@ -7,7 +7,7 @@ import { LandingHero } from "./LandingHero";
 
 export function MarketingLanding(props: { supabaseConfig: SupabasePublicConfig | null }) {
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-black text-white">
+    <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-black text-white">
       <AnimatedBackgroundGrid />
       <LandingHero supabaseConfig={props.supabaseConfig} />
     </div>

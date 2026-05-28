@@ -2,7 +2,7 @@ export function TwiqBackground() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none fixed inset-0 z-0 h-[100dvh] min-h-[100svh] w-screen"
       style={{
         backgroundImage: [
           "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.055) 1px, transparent 1.4px)",

@@ -12,7 +12,7 @@ export default function LoginPage() {
   const siteUrl = getSiteUrl();
 
   return (
-    <div className="relative flex min-h-full items-center justify-center bg-black px-4 py-12 text-white">
+    <div className="relative flex min-h-[100dvh] items-center justify-center bg-black px-4 py-12 text-white">
       <TwiqBackground />
       <div className="relative z-10 w-full max-w-md">
         <Suspense
