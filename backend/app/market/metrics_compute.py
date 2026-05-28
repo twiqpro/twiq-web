@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 from datetime import datetime
+from math import exp, log, pi, sqrt
 from typing import Iterable, Optional
+from zoneinfo import ZoneInfo
 
 from app.market.oi_history import OiHistoryStore, StrikeOiSnapshot
 from app.market.oi_intervals import OI_INTERVAL_KEYS, OI_INTERVAL_MINUTES
-from app.models.metrics import OIStrikeRow, StrikeOiChange
+from app.models.metrics import (
+    GammaEstimate,
+    GammaStrikeContribution,
+    OIStrikeRow,
+    StrikeOiChange,
+)
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 def format_expiry_label(expiry_iso: str) -> str:
@@ -196,3 +205,316 @@ def build_metrics_note(
             f"{oi_support:.0f} and resistance near {oi_resistance:.0f}."
         )
     return "\n\n".join(parts) if parts else "Live NIFTY options metrics."
+
+
+def _norm_pdf(x: float) -> float:
+    return exp(-0.5 * x * x) / sqrt(2.0 * pi)
+
+
+def _time_to_expiry_years(expiry_iso: str) -> float:
+    if not expiry_iso:
+        return 0.0
+    expiry_day = datetime.strptime(expiry_iso, "%Y-%m-%d").date()
+    expiry_dt = datetime(
+        expiry_day.year, expiry_day.month, expiry_day.day, 15, 30, tzinfo=IST
+    )
+    now = datetime.now(tz=IST)
+    seconds = max((expiry_dt - now).total_seconds(), 0.0)
+    return seconds / (365.0 * 24.0 * 3600.0)
+
+
+def _pick_iv(row: OIStrikeRow) -> Optional[float]:
+    values = [v for v in (row.ce_iv, row.pe_iv) if v is not None and v > 0]
+    if not values:
+        return None
+    # Dhan IV can be in percent points; normalize to decimal vol.
+    iv = sum(values) / len(values)
+    return iv / 100.0 if iv > 1.0 else iv
+
+
+def _bs_gamma(spot: float, strike: float, vol: float, t: float, r: float) -> float:
+    if spot <= 0 or strike <= 0 or vol <= 0 or t <= 0:
+        return 0.0
+    sigma_t = vol * sqrt(t)
+    if sigma_t <= 0:
+        return 0.0
+    d1 = (log(spot / strike) + (r + 0.5 * vol * vol) * t) / sigma_t
+    return _norm_pdf(d1) / (spot * sigma_t)
+
+
+def _build_gamma_insights(
+    *,
+    regime: str,
+    direction: str,
+    confidence: str,
+    flip_zone: Optional[float],
+    near_net_gamma: float,
+    spot: float,
+) -> list[str]:
+    insights: list[str] = []
+    regime_copy = regime.lower()
+    if regime == "Positive":
+        insights.append(
+            "Estimated gamma remains positive near spot, which suggests movement may stay relatively dampened."
+        )
+    elif regime == "Negative":
+        insights.append(
+            "Estimated gamma is negative near spot, which suggests expansion risk can rise with directional moves."
+        )
+    else:
+        insights.append(
+            "Estimated gamma is near neutral, which suggests stabilizing pressure is limited at current levels."
+        )
+
+    insights.append(
+        f"Estimated gamma pressure is currently {direction.lower()}, and this can influence short-term move sensitivity."
+    )
+
+    if flip_zone is not None:
+        distance = abs(spot - flip_zone)
+        if distance <= max(spot * 0.003, 40):
+            insights.append(
+                f"NIFTY is trading close to the gamma flip zone near {flip_zone:.0f}, where behavior may shift quickly."
+            )
+        else:
+            insights.append(
+                f"The nearest gamma flip zone is around {flip_zone:.0f}; staying away from it may keep the current {regime_copy} regime intact."
+            )
+
+    if confidence != "High":
+        insights.append(
+            f"Signal confidence is {confidence.lower()} because public-chain estimates can differ from actual positioning."
+        )
+
+    if abs(near_net_gamma) < 1e-6:
+        insights.append(
+            "Estimated net gamma near spot is weak, which indicates any stabilizing or weakening effect may be shallow."
+        )
+
+    return insights[:4]
+
+
+def compute_estimated_gamma(
+    *,
+    rows: Iterable[OIStrikeRow],
+    spot: float,
+    expiry_iso: str,
+    risk_free_rate: float = 0.06,
+    contract_multiplier: int = 50,
+    regime_changed_intraday: bool = False,
+) -> GammaEstimate:
+    strikes = sorted(list(rows), key=lambda r: r.strike)
+    if not strikes or spot <= 0:
+        return GammaEstimate(
+            regime="Unavailable",
+            status="unavailable",
+            insights=["Estimated gamma unavailable due to incomplete option-chain inputs."],
+        )
+
+    t = _time_to_expiry_years(expiry_iso)
+    if t <= 0:
+        return GammaEstimate(
+            regime="Unavailable",
+            status="unavailable",
+            insights=["Estimated gamma unavailable because expiry timing is too close or invalid."],
+        )
+
+    strike_exposures: list[tuple[float, float, OIStrikeRow, float]] = []
+    valid_iv_count = 0
+    for row in strikes:
+        iv = _pick_iv(row)
+        if iv is None:
+            continue
+        gamma = _bs_gamma(spot, row.strike, iv, t, risk_free_rate)
+        call_exp = gamma * row.call_oi * contract_multiplier * spot * spot * 0.01
+        put_exp = -gamma * row.put_oi * contract_multiplier * spot * spot * 0.01
+        strike_exposures.append((row.strike, call_exp + put_exp, row, iv))
+        valid_iv_count += 1
+
+    iv_coverage = valid_iv_count / max(len(strikes), 1)
+    if not strike_exposures or iv_coverage < 0.35:
+        return GammaEstimate(
+            regime="Unavailable",
+            status="unavailable",
+            confidence="Low",
+            insights=["Estimated gamma unavailable due to insufficient IV coverage across strikes."],
+        )
+
+    near_band = max(spot * 0.02, 300.0)
+    near = [
+        exp for strike, exp, _row, _iv in strike_exposures if abs(strike - spot) <= near_band
+    ]
+    near_net_gamma = sum(near) if near else 0.0
+    total_abs = sum(abs(exp) for _strike, exp, _row, _iv in strike_exposures)
+    score = near_net_gamma / max(total_abs, 1.0)
+
+    if score > 0.08:
+        regime = "Positive"
+    elif score < -0.08:
+        regime = "Negative"
+    else:
+        regime = "Neutral"
+
+    if regime == "Negative":
+        direction = "Expansion Risk"
+    elif regime == "Positive":
+        direction = "Strengthening" if abs(score) >= 0.16 else "Weakening"
+    else:
+        direction = "Stable" if abs(score) < 0.02 else "Weakening"
+
+    flip_candidates: list[float] = []
+    for idx in range(1, len(strike_exposures)):
+        left_strike, left_val, _left_row, _left_iv = strike_exposures[idx - 1]
+        right_strike, right_val, _right_row, _right_iv = strike_exposures[idx]
+        if left_val == 0:
+            flip_candidates.append(left_strike)
+            continue
+        if left_val * right_val < 0:
+            weight = abs(left_val) / (abs(left_val) + abs(right_val))
+            flip_candidates.append(left_strike + (right_strike - left_strike) * weight)
+
+    flip_zone: Optional[float] = None
+    if flip_candidates:
+        # Use the sign-change closest to current spot, not the first in chain order.
+        nearest = min(flip_candidates, key=lambda zone: abs(zone - spot))
+        # Guardrail: hide implausibly far flip zones rather than showing misleading values.
+        max_allowed_distance = max(spot * 0.05, 600.0)
+        if abs(nearest - spot) <= max_allowed_distance:
+            flip_zone = nearest
+
+    if iv_coverage >= 0.75 and t >= 1.0 / 365.0:
+        confidence = "High"
+        status = "ok"
+    elif iv_coverage >= 0.5:
+        confidence = "Medium"
+        status = "low_confidence"
+    else:
+        confidence = "Low"
+        status = "low_confidence"
+
+    if flip_zone is None and status == "ok":
+        # If we cannot resolve a credible nearby flip level, downgrade confidence.
+        confidence = "Medium"
+        status = "low_confidence"
+
+    flip_distance_points = abs(spot - flip_zone) if flip_zone is not None else None
+    flip_distance_percent = (
+        (flip_distance_points / spot) * 100.0 if flip_distance_points is not None else None
+    )
+
+    positives = sorted(
+        [entry for entry in strike_exposures if entry[1] > 0],
+        key=lambda item: item[1],
+        reverse=True,
+    )
+    negatives = sorted(
+        [entry for entry in strike_exposures if entry[1] < 0],
+        key=lambda item: item[1],
+    )
+    dominant_positive = [strike for strike, _exp, _row, _iv in positives[:3]]
+    dominant_negative = [strike for strike, _exp, _row, _iv in negatives[:3]]
+
+    above_concentration = sum(
+        abs(exp) for strike, exp, _row, _iv in strike_exposures if strike > spot
+    )
+    below_concentration = sum(
+        abs(exp) for strike, exp, _row, _iv in strike_exposures if strike < spot
+    )
+    total_concentration = above_concentration + below_concentration
+    above_share = (
+        (above_concentration / total_concentration) * 100.0
+        if total_concentration > 0
+        else None
+    )
+    below_share = (
+        (below_concentration / total_concentration) * 100.0
+        if total_concentration > 0
+        else None
+    )
+
+    highest_impact = (
+        min(strike_exposures, key=lambda item: (abs(item[0] - spot), -abs(item[1])))
+        if strike_exposures
+        else None
+    )
+    nearest_high_impact_strike = highest_impact[0] if highest_impact else None
+
+    zone_candidates = sorted(
+        strike_exposures, key=lambda item: (abs(item[0] - spot), -abs(item[1]))
+    )[:5]
+    if zone_candidates:
+        zone_min = min(item[0] for item in zone_candidates)
+        zone_max = max(item[0] for item in zone_candidates)
+        tolerance = 25.0
+        if spot < zone_min - tolerance:
+            spot_position_vs_zone = "Below main gamma zone"
+        elif spot > zone_max + tolerance:
+            spot_position_vs_zone = "Above main gamma zone"
+        else:
+            spot_position_vs_zone = "Inside main gamma zone"
+    else:
+        spot_position_vs_zone = "Unknown"
+
+    strike_contributions = sorted(
+        strike_exposures,
+        key=lambda item: (abs(item[0] - spot), -abs(item[1])),
+    )[:16]
+    contribution_rows: list[GammaStrikeContribution] = []
+    for strike, exp, row, iv in strike_contributions:
+        if flip_zone is not None and abs(strike - flip_zone) <= 25:
+            contribution_label = "Flip-sensitive"
+        elif exp >= 0:
+            contribution_label = "Stabilizing"
+        else:
+            contribution_label = "Destabilizing"
+        contribution_rows.append(
+            GammaStrikeContribution(
+                strike=round(strike, 2),
+                estimated_gex=round(exp, 2),
+                call_oi=row.call_oi,
+                put_oi=row.put_oi,
+                iv=round(iv * 100, 2),
+                distance_from_spot=round(strike - spot, 2),
+                contribution_label=contribution_label,
+            )
+        )
+
+    insights = _build_gamma_insights(
+        regime=regime,
+        direction=direction,
+        confidence=confidence,
+        flip_zone=flip_zone,
+        near_net_gamma=near_net_gamma,
+        spot=spot,
+    )
+    return GammaEstimate(
+        regime=regime,
+        direction=direction,
+        flip_zone=round(flip_zone, 2) if flip_zone is not None else None,
+        flip_distance_points=(
+            round(flip_distance_points, 2) if flip_distance_points is not None else None
+        ),
+        flip_distance_percent=(
+            round(flip_distance_percent, 3) if flip_distance_percent is not None else None
+        ),
+        confidence=confidence,
+        status=status,
+        spot=round(spot, 2),
+        near_net_gamma=round(near_net_gamma, 2),
+        near_net_gamma_index=round(score * 100, 2),
+        dominant_positive_strikes=[round(s, 2) for s in dominant_positive],
+        dominant_negative_strikes=[round(s, 2) for s in dominant_negative],
+        nearest_high_impact_strike=(
+            round(nearest_high_impact_strike, 2)
+            if nearest_high_impact_strike is not None
+            else None
+        ),
+        gamma_concentration_above_spot=round(above_concentration, 2),
+        gamma_concentration_below_spot=round(below_concentration, 2),
+        gamma_concentration_above_share=round(above_share, 2) if above_share is not None else None,
+        gamma_concentration_below_share=round(below_share, 2) if below_share is not None else None,
+        spot_position_vs_zone=spot_position_vs_zone,
+        regime_changed_intraday=regime_changed_intraday,
+        strike_contributions=contribution_rows,
+        insights=insights,
+    )

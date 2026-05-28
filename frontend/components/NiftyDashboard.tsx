@@ -3,6 +3,7 @@
 import { MetricsCard } from "@/components/MetricsCard";
 import { NiftyChartLite } from "@/components/Chart/NiftyChartLite";
 import { OpenInterestPanel } from "@/components/OpenInterest/OpenInterestPanel";
+import { GammaRegimeCard } from "@/components/GammaRegimeCard";
 import { useNiftyMetrics } from "@/hooks/useNiftyMetrics";
 import type { OIProfileStrike } from "@/lib/chartTypes";
 
@@ -92,8 +93,7 @@ const PLACEHOLDER = metricsToCards({
   note: "Loading live NIFTY metrics…",
 });
 
-export function NiftyDashboard(props: { imgAiSpark: string }) {
-  const { imgAiSpark } = props;
+export function NiftyDashboard() {
   const { metrics, error } = useNiftyMetrics();
 
   const cardProps = metrics ? metricsToCards(metrics) : PLACEHOLDER;
@@ -102,7 +102,7 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
   const oiStrikesAll = metrics?.strikes ?? [];
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-6">
+    <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-3">
       {error ? (
         <p className="mb-3 rounded-md bg-black/50 px-3 py-2 text-xs text-rose-200">
           {error}
@@ -137,14 +137,8 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
           <MetricsCard {...cardProps} />
         </section>
 
-        <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md border border-[#b5004e]/60 bg-[linear-gradient(90deg,rgba(235,47,150,0.95)_0%,rgba(133,27,85,0.95)_100%)] px-3 py-1.5 text-sm font-medium"
-          >
-            <img alt="" src={imgAiSpark} className="h-4 w-4" />
-            AI Insights
-          </button>
+        <section>
+          <GammaRegimeCard gamma={metrics?.gamma_estimate} />
         </section>
       </div>
     </main>

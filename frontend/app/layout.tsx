@@ -13,8 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TWIQ Web — Market Structure Chart",
+  title: "pro insights for super traders",
   description: "Realtime NIFTY market structure visualization for web and mobile WebView embed.",
+  icons: {
+    icon: "/india-flag.svg",
+    shortcut: "/india-flag.svg",
+    apple: "/india-flag.svg",
+  },
 };
 
 export default function RootLayout({

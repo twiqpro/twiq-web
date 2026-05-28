@@ -15,6 +15,7 @@ from app.feed.dhan_feed import FeedInstrument, REQUEST_SUBSCRIBE_QUOTE
 from app.market.metrics_compute import (
     apply_oi_changes_to_rows,
     build_metrics_note,
+    compute_estimated_gamma,
     compute_atm_iv,
     compute_max_pain,
     compute_oi_interval_changes,
@@ -58,6 +59,8 @@ class NiftyMetricsAggregator:
         self._last_snapshot: Optional[NiftyMetricsSnapshot] = None
         self._oi_history = OiHistoryStore()
         self._oi_interval: str = "15M"
+        self._prev_gamma_regime: Optional[str] = None
+        self._gamma_regime_changed_intraday: bool = False
 
     @property
     def feed_instruments(self) -> list[FeedInstrument]:
@@ -109,6 +112,8 @@ class NiftyMetricsAggregator:
                 leg.security_id: (leg.strike, leg.side) for leg in boot.legs
             }
             self._dirty = True
+            self._prev_gamma_regime = None
+            self._gamma_regime_changed_intraday = False
 
         await self._bootstrap_index_quotes()
         async with self._lock:
@@ -353,6 +358,24 @@ class NiftyMetricsAggregator:
         if self.vix_ltp is not None and self.vix_prev_close:
             vix_change = round(self.vix_ltp - self.vix_prev_close, 1)
 
+        gamma_estimate = compute_estimated_gamma(
+            rows=rows,
+            spot=spot,
+            expiry_iso=self.expiry,
+            risk_free_rate=self.settings.gamma_risk_free_rate,
+            contract_multiplier=self.settings.gamma_contract_multiplier,
+            regime_changed_intraday=self._gamma_regime_changed_intraday,
+        )
+        current_gamma_regime = gamma_estimate.regime
+        if current_gamma_regime in {"Positive", "Negative", "Neutral"}:
+            if (
+                self._prev_gamma_regime
+                and self._prev_gamma_regime != current_gamma_regime
+            ):
+                self._gamma_regime_changed_intraday = True
+                gamma_estimate.regime_changed_intraday = True
+            self._prev_gamma_regime = current_gamma_regime
+
         return NiftyMetricsSnapshot(
             expiry=self.expiry,
             expiry_label=format_expiry_label(self.expiry) if self.expiry else "",
@@ -369,6 +392,7 @@ class NiftyMetricsAggregator:
             strikes=rows,
             oi_interval=oi_interval.upper(),
             oi_history_ready=history_ready,
+            gamma_estimate=gamma_estimate,
             note=build_metrics_note(
                 atm_iv=atm_iv,
                 india_vix=self.vix_ltp,

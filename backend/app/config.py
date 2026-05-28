@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     india_vix_security_id: str = "21"
     india_vix_exchange_segment: str = "IDX_I"
 
+    # Estimated gamma configuration
+    gamma_risk_free_rate: float = 0.06
+    gamma_contract_multiplier: int = 50
+
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = (
         "https://twiqpro.netlify.app,"

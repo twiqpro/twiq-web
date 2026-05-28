@@ -1,9 +1,11 @@
+"use client";
+
 import { NiftyDashboard } from "@/components/NiftyDashboard";
-import { TwiqTopNav } from "@/components/TwiqTopNav";
+import { TwiqTopNav, type TopNavTabId } from "@/components/TwiqTopNav";
+import { useState } from "react";
 
 export default function Home() {
-  const imgAiSpark =
-    "https://www.figma.com/api/mcp/asset/1abb13a4-5090-4a50-a657-be440d42375f";
+  const [activeTab, setActiveTab] = useState<TopNavTabId>("fo");
 
   return (
     <div className="min-h-full bg-[#000000] text-white">
@@ -30,9 +32,22 @@ export default function Home() {
         />
 
         <div className="relative z-10">
-          <TwiqTopNav />
+          <TwiqTopNav
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onLogout={() => {
+              // Placeholder action until auth wiring is added.
+              console.log("Logout clicked");
+            }}
+          />
 
-          <NiftyDashboard imgAiSpark={imgAiSpark} />
+          {activeTab === "fo" ? (
+            <NiftyDashboard />
+          ) : activeTab === "stocks" ? (
+            <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-3" />
+          ) : (
+            <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-3" />
+          )}
         </div>
       </div>
     </div>

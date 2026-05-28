@@ -22,6 +22,41 @@ class OIStrikeRow(BaseModel):
     oi_changes: dict[str, StrikeOiChange] = Field(default_factory=dict)
 
 
+class GammaStrikeContribution(BaseModel):
+    strike: float
+    estimated_gex: float
+    call_oi: int
+    put_oi: int
+    iv: Optional[float] = None
+    distance_from_spot: float
+    contribution_label: str
+
+
+class GammaEstimate(BaseModel):
+    label: str = "Estimated Gamma Regime"
+    regime: str = "Unavailable"
+    direction: str = "Weakening"
+    flip_zone: Optional[float] = None
+    flip_distance_points: Optional[float] = None
+    flip_distance_percent: Optional[float] = None
+    confidence: str = "Low"
+    status: str = "unavailable"
+    spot: Optional[float] = None
+    near_net_gamma: Optional[float] = None
+    near_net_gamma_index: Optional[float] = None
+    dominant_positive_strikes: list[float] = Field(default_factory=list)
+    dominant_negative_strikes: list[float] = Field(default_factory=list)
+    nearest_high_impact_strike: Optional[float] = None
+    gamma_concentration_above_spot: Optional[float] = None
+    gamma_concentration_below_spot: Optional[float] = None
+    gamma_concentration_above_share: Optional[float] = None
+    gamma_concentration_below_share: Optional[float] = None
+    spot_position_vs_zone: str = "Unknown"
+    regime_changed_intraday: bool = False
+    strike_contributions: list[GammaStrikeContribution] = Field(default_factory=list)
+    insights: list[str] = Field(default_factory=list)
+
+
 class NiftyMetricsSnapshot(BaseModel):
     symbol: str = "NIFTY"
     expiry: str
@@ -39,4 +74,5 @@ class NiftyMetricsSnapshot(BaseModel):
     strikes: list[OIStrikeRow] = Field(default_factory=list)
     oi_interval: str = "15M"
     oi_history_ready: bool = False
+    gamma_estimate: GammaEstimate = Field(default_factory=GammaEstimate)
     note: str = ""

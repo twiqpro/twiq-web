@@ -1,14 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const imgUserCircle =
-  "https://www.figma.com/api/mcp/asset/6cdf2e84-db24-454e-92fe-fd3b61934ab9";
+export type TopNavTabId = "fo" | "stocks" | "finNews";
 
-type TabId = "fo" | "stocks" | "finNews" | "profile";
-
-export function TwiqTopNav() {
-  const [active, setActive] = useState<TabId>("fo");
+export function TwiqTopNav(props: {
+  activeTab: TopNavTabId;
+  onTabChange: (tabId: TopNavTabId) => void;
+  onLogout?: () => void;
+}) {
+  const { activeTab, onTabChange } = props;
+  const tabsRailRef = useRef<HTMLDivElement | null>(null);
+  const tabButtonRefs = useRef<Record<TopNavTabId, HTMLButtonElement | null>>({
+    fo: null,
+    stocks: null,
+    finNews: null,
+  });
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    left: number;
+    width: number;
+    ready: boolean;
+  }>({
+    left: 0,
+    width: 0,
+    ready: false,
+  });
 
   const tabs = useMemo(
     () =>
@@ -16,10 +32,31 @@ export function TwiqTopNav() {
         { id: "fo", label: "F & O" },
         { id: "stocks", label: "Stocks" },
         { id: "finNews", label: "Fin News" },
-        { id: "profile", label: null },
       ] as const,
     [],
   );
+
+  useLayoutEffect(() => {
+    const syncIndicator = () => {
+      const rail = tabsRailRef.current;
+      const activeButton = tabButtonRefs.current[activeTab];
+      if (!rail || !activeButton) {
+        return;
+      }
+
+      const nextLeft = activeButton.offsetLeft;
+      const nextWidth = activeButton.offsetWidth;
+      setIndicatorStyle((previous) => ({
+        left: nextLeft,
+        width: nextWidth,
+        ready: previous.ready || nextWidth > 0,
+      }));
+    };
+
+    syncIndicator();
+    window.addEventListener("resize", syncIndicator);
+    return () => window.removeEventListener("resize", syncIndicator);
+  }, [activeTab]);
 
   return (
     <div className="flex w-full items-center gap-4 px-6 pt-2">
@@ -41,7 +78,7 @@ export function TwiqTopNav() {
       <div className="flex flex-1 justify-center">
         <div
           className={[
-            "relative isolate flex h-14 items-center gap-2 overflow-hidden rounded-full p-3",
+            "relative isolate flex h-fit w-fit items-center gap-2 overflow-hidden rounded-full p-2",
             // Translucent tint + blur — most of the "glass" is seeing the page through blur, not a white wash
             "bg-white/[0.04] backdrop-blur-[8px]",
             "border border-white/[0.06]",
@@ -50,48 +87,51 @@ export function TwiqTopNav() {
             "before:bg-[radial-gradient(95%_110%_at_15%_-10%,rgba(255,255,255,0.18)_0%,transparent_52%)]",
           ].join(" ")}
         >
-          {tabs.map((tab) => {
-            const isActive = active === tab.id;
-            if (tab.id === "profile") {
+          <div ref={tabsRailRef} className="relative z-10 flex items-center gap-2">
+            <div
+              aria-hidden
+              className={[
+                "pointer-events-none absolute inset-y-0 rounded-full bg-[#ffffff]",
+                "shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_8px_20px_rgba(255,255,255,0.18)]",
+                "transition-[left,width,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                indicatorStyle.ready ? "opacity-100 scale-100" : "opacity-0 scale-95",
+              ].join(" ")}
+              style={{
+                left: indicatorStyle.left,
+                width: indicatorStyle.width,
+              }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 rounded-full bg-white/40 blur-[12px] transition-[left,width,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              style={{
+                left: indicatorStyle.left,
+                width: indicatorStyle.width,
+                opacity: indicatorStyle.ready ? 0.45 : 0,
+              }}
+            />
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  ref={(element) => {
+                    tabButtonRefs.current[tab.id] = element;
+                  }}
                   type="button"
-                  aria-label="Profile"
-                  onClick={() => setActive(tab.id)}
+                  onClick={() => onTabChange(tab.id)}
                   className={[
-                    "relative z-10 flex h-8 w-10 items-center justify-center rounded-full transition",
+                    "relative z-10 flex h-8 items-center justify-center rounded-full px-3 text-sm font-medium transition-[color,opacity] duration-300",
                     isActive
-                      ? "bg-[#ffffff] text-[#000000] shadow-sm"
-                      : "opacity-60 hover:opacity-90",
+                      ? "text-[#000000]"
+                      : "text-zinc-200/90 opacity-60 hover:opacity-90",
                   ].join(" ")}
                 >
-                  <img
-                    alt=""
-                    src={imgUserCircle}
-                    className="h-5 w-5"
-                    draggable={false}
-                  />
+                  {tab.label}
                 </button>
               );
-            }
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActive(tab.id)}
-                className={[
-                  "relative z-10 flex h-8 items-center justify-center rounded-full px-3 text-sm font-medium transition",
-                  isActive
-                    ? "bg-[#ffffff] text-[#000000] shadow-sm"
-                    : "text-zinc-200/90 opacity-60 hover:opacity-90",
-                ].join(" ")}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
       <img
