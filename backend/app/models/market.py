@@ -15,6 +15,13 @@ class CandleData(BaseModel):
     open_interest: Optional[int] = None
 
 
+class TrendSignal(BaseModel):
+    regime: str = "Sideways"
+    day_open: Optional[float] = None
+    current: Optional[float] = None
+    change_pct: Optional[float] = None
+
+
 class HistoricalDataResponse(BaseModel):
     symbol: str
     security_id: str
@@ -22,4 +29,5 @@ class HistoricalDataResponse(BaseModel):
     interval: str
     candles: list[CandleData]
     count: int = Field(description="Number of candles returned")
+    trend: TrendSignal = Field(default_factory=TrendSignal)
 

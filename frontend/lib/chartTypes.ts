@@ -7,6 +7,13 @@ export type ChartCandle = {
   volume?: number;
 };
 
+export type TrendSignal = {
+  regime: "Bullish" | "Bearish" | "Sideways" | string;
+  day_open?: number | null;
+  current?: number | null;
+  change_pct?: number | null;
+};
+
 export type StrikeOiChange = {
   call_oi_change?: number | null;
   put_oi_change?: number | null;

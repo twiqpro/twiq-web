@@ -10,6 +10,7 @@ from app.feed.binary_parser import MarketTick
 from app.feed.dhan_feed import DhanFeedClient, FeedInstrument, REQUEST_SUBSCRIBE_TICKER
 from app.indicators.candle_aggregator import CandleAggregator
 from app.market.nifty import get_nifty_instrument
+from app.market.trend_signal import IntradayTrendTracker
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class NiftyConnectionManager:
         self._tick_count = 0
         self._feed_client: Optional[DhanFeedClient] = None
         self._lock = asyncio.Lock()
+        self._trend = IntradayTrendTracker()
 
     async def connect(self, websocket: WebSocket, timeframe: str = "5M") -> None:
         await websocket.accept()
@@ -44,6 +46,9 @@ class NiftyConnectionManager:
                     "symbol": "NIFTY",
                     "message": "connected",
                     "timeframe": self._timeframe,
+                    "trend": {
+                        "regime": "Sideways",
+                    },
                 }
             )
 
@@ -78,6 +83,7 @@ class NiftyConnectionManager:
         tick = event
         if not self._aggregator:
             return
+        trend = self._trend.update(tick.price, tick.timestamp)
 
         closed = self._aggregator.add_tick(tick.price, tick.volume, tick.timestamp)
 
@@ -88,6 +94,7 @@ class NiftyConnectionManager:
                     "symbol": "NIFTY",
                     "candle": closed.to_dict(),
                     "ltp": tick.price,
+                    "trend": trend.model_dump(),
                 }
             )
 
@@ -102,6 +109,7 @@ class NiftyConnectionManager:
                         "candle": partial.to_dict(),
                         "ltp": tick.price,
                         "open_interest": getattr(tick, "open_interest", None),
+                        "trend": trend.model_dump(),
                     }
                 )
 

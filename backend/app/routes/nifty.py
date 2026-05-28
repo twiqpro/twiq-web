@@ -6,6 +6,7 @@ from app.auth.dhanhq_oauth import DhanHQAuthError
 from app.clients.dhanhq_client import DhanHQClient
 from app.clients.exceptions import DhanHQAPIError
 from app.config import get_settings
+from app.market.trend_signal import classify_trend_from_candles
 from app.models.market import HistoricalDataResponse
 from app.models.metrics import NiftyMetricsSnapshot
 from app.websocket.metrics_manager import metrics_manager
@@ -60,6 +61,7 @@ async def nifty_historical(
         interval=interval.upper(),
         candles=candles,
         count=len(candles),
+        trend=classify_trend_from_candles(candles),
     )
 
 

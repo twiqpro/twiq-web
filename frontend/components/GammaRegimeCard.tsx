@@ -21,6 +21,26 @@ function confidenceTone(confidence: string): string {
   return "text-white/65";
 }
 
+function renderInsightText(text: string) {
+  const tokenRegex =
+    /(Positive gamma|Negative gamma|gamma flip zone|flip zone|\b\d[\d,]*(?:\.\d+)?%?\b)/gi;
+  const parts = text.split(tokenRegex);
+  return parts.map((part, idx) => {
+    const isToken =
+      /^(Positive gamma|Negative gamma|gamma flip zone|flip zone|\d[\d,]*(\.\d+)?%?)$/i.test(
+        part,
+      );
+    if (isToken) {
+      return (
+        <span key={idx} className="font-semibold text-cyan-300">
+          {part}
+        </span>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
 export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const { gamma } = props;
@@ -131,14 +151,14 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
     <section className="flex w-full flex-col gap-4 rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
       <header className="flex items-start gap-3 text-left">
         <div className="inline-flex items-center gap-1.5">
-          <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
+          <h2 className="text-[18px] font-semibold leading-none tracking-tight text-white/95">
             Gamma Region
-          </span>
+          </h2>
           <span className="group relative inline-flex">
             <button
               type="button"
               aria-label="Explain gamma estimate"
-              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-white/35 transition-colors hover:border-white/30 hover:text-white/50"
             >
               <InformationCircleIcon className="h-4 w-4" />
             </button>
@@ -162,7 +182,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
             <button
               type="button"
               aria-label="Explain gamma regime and direction"
-              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-white/35 transition-colors hover:border-white/30 hover:text-white/50"
             >
               <InformationCircleIcon className="h-4 w-4" />
             </button>
@@ -241,7 +261,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
             <button
               type="button"
               aria-label="Explain positive gamma"
-              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/20 text-white/35 transition-colors hover:border-white/30 hover:text-white/50"
             >
               <InformationCircleIcon className="h-3.5 w-3.5" />
             </button>
@@ -267,7 +287,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
             <button
               type="button"
               aria-label="Explain negative gamma"
-              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/20 text-white/35 transition-colors hover:border-white/30 hover:text-white/50"
             >
               <InformationCircleIcon className="h-3.5 w-3.5" />
             </button>
@@ -289,7 +309,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
       </div>
       <ul className="list-disc space-y-1 pl-4 text-sm leading-5 text-white/95">
         {proInsights.map((point, idx) => (
-          <li key={idx}>{point}</li>
+          <li key={idx}>{renderInsightText(point)}</li>
         ))}
       </ul>
 

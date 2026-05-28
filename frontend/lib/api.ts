@@ -1,5 +1,5 @@
 import { config } from "./config";
-import type { ChartCandle } from "./chartTypes";
+import type { ChartCandle, TrendSignal } from "./chartTypes";
 import type { NiftyMetrics } from "./metricsTypes";
 
 export type HealthResponse = {
@@ -28,12 +28,18 @@ type NiftyHistoricalResponse = {
     close: number;
     volume?: number;
   }>;
+  trend?: {
+    regime: string;
+    day_open?: number | null;
+    current?: number | null;
+    change_pct?: number | null;
+  };
 };
 
 export async function fetchNiftyHistorical(params: {
   interval: string;
   limit?: number;
-}): Promise<ChartCandle[]> {
+}): Promise<{ candles: ChartCandle[]; trend: TrendSignal | null }> {
   const qs = new URLSearchParams({
     interval: params.interval,
     limit: String(params.limit ?? 200),
@@ -49,7 +55,7 @@ export async function fetchNiftyHistorical(params: {
   }
 
   const data = (await response.json()) as NiftyHistoricalResponse;
-  return (data.candles ?? []).map((c) => ({
+  const candles = (data.candles ?? []).map((c) => ({
     time: c.timestamp,
     open: c.open,
     high: c.high,
@@ -57,6 +63,17 @@ export async function fetchNiftyHistorical(params: {
     close: c.close,
     volume: c.volume,
   }));
+  return {
+    candles,
+    trend: data.trend
+      ? {
+          regime: data.trend.regime,
+          day_open: data.trend.day_open ?? null,
+          current: data.trend.current ?? null,
+          change_pct: data.trend.change_pct ?? null,
+        }
+      : null,
+  };
 }
 
 export async function fetchNiftyMetrics(

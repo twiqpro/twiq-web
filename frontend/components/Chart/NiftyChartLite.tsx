@@ -13,7 +13,7 @@ import {
   type Time,
 } from "lightweight-charts";
 
-import type { ChartCandle, OIProfileStrike } from "@/lib/chartTypes";
+import type { ChartCandle, OIProfileStrike, TrendSignal } from "@/lib/chartTypes";
 import { config } from "@/lib/config";
 import { fetchNiftyHistorical } from "@/lib/api";
 import { formatChartPrice } from "@/lib/formatPrice";
@@ -131,6 +131,7 @@ export function NiftyChartLite(props: {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [trend, setTrend] = useState<TrendSignal | null>(null);
   const [interval, setInterval] = useState<"1M" | "5M" | "15M" | "30M" | "1H" | "4H">(
     "5M",
   );
@@ -275,7 +276,8 @@ export function NiftyChartLite(props: {
       .then((data) => {
         if (cancelled) return;
         setError(null);
-        setCandles(data);
+        setCandles(data.candles);
+        setTrend(data.trend);
         setBulkDataVersion((v) => v + 1);
       })
       .catch((e: unknown) => {
@@ -319,6 +321,7 @@ export function NiftyChartLite(props: {
             close: number;
             volume?: number;
           };
+          trend?: TrendSignal;
           message?: string;
         };
 
@@ -327,6 +330,9 @@ export function NiftyChartLite(props: {
           return;
         }
         setError(null);
+        if (msg.trend) {
+          setTrend(msg.trend);
+        }
 
         if (!msg.candle) return;
         const next: ChartCandle = {
@@ -376,6 +382,7 @@ export function NiftyChartLite(props: {
           interval={interval}
           onIntervalChange={setInterval}
           indicatorsPlaceholder={true}
+          trend={trend}
         />
       </div>
       <div ref={containerRef} className="h-full w-full pt-12" />

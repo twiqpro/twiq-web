@@ -188,7 +188,7 @@ export function OpenInterestPanel(props: {
               <button
                 type="button"
                 aria-label="Explain Max Delta OI"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 text-white/35 transition-colors hover:border-white/30 hover:text-white/50"
               >
                 <InformationCircleIcon className="h-4 w-4" />
               </button>
