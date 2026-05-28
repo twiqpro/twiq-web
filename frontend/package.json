@@ -23,7 +23,6 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.15.11",
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

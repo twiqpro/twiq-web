@@ -49,7 +49,6 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = (
-        "https://twiqpro.netlify.app,"
         "https://twiq.pro,"
         "https://www.twiq.pro,"
         "http://localhost:3000,"
