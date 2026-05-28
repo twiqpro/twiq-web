@@ -47,6 +47,8 @@ function metricsToCards(metrics: {
 }) {
   return {
     pcrLabel: `PCR : ${metrics.pcr} (${metrics.pcr_label})`,
+    pcrValue: metrics.pcr,
+    pcrSentiment: metrics.pcr_label,
     expiryLabel: `Expiry : ${metrics.expiry_label}`,
     columns: [
       [
@@ -71,7 +73,7 @@ function metricsToCards(metrics: {
       ],
       [{ label: "Max Pain", value: formatPrice(metrics.max_pain) }],
     ] as Stat[][],
-    note: metrics.note ? `“${metrics.note.replace(/\n\n/g, "\n\n")}”` : "",
+    note: metrics.note ? metrics.note : "",
   };
 }
 

@@ -23,6 +23,7 @@ import { OIProfileOverlay } from "./OIProfileOverlay";
 
 const CHART_BG = "#121212";
 const IST_TIMEZONE = "Asia/Kolkata";
+const RIGHT_GUTTER_BARS = 6; // ~60px visual breathing room on default spacing
 
 function toDateFromLwTime(time: Time): Date {
   if (typeof time === "number") {
@@ -234,8 +235,8 @@ export function NiftyChartLite(props: {
 
     chart.applyOptions({
       timeScale: {
-        // keep the toolbar from overlapping the topmost candles
-        rightOffset: 0,
+        // Keep candles away from the right border so the latest bars are readable.
+        rightOffset: RIGHT_GUTTER_BARS,
       },
     });
 
