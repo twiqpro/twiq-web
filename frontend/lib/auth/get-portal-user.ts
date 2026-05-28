@@ -35,6 +35,7 @@ export async function getPortalUser() {
   }
 }
 
+/** Prefer `usePortalUser()` inside `/portal/*` client pages — server cookies are unreliable on Cloudflare. */
 export async function requirePortalUser() {
   const user = await getPortalUser();
   if (!user) {

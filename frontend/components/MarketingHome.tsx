@@ -1,8 +1,7 @@
-import Link from "next/link";
-
+import { MarketingSessionLink } from "@/components/MarketingSessionLink";
 import { TwiqBackground } from "@/components/TwiqBackground";
 import { TwiqLogo } from "@/components/TwiqLogo";
-import { PORTAL_PATHS } from "@/lib/auth/paths";
+import type { SupabasePublicConfig } from "@/lib/supabase/config";
 
 const features = [
   {
@@ -22,7 +21,12 @@ const features = [
   },
 ];
 
-export function MarketingHome(props: { isLoggedIn: boolean }) {
+const primaryCtaClass =
+  "rounded-full bg-[#b5004e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c90058]";
+
+export function MarketingHome(props: {
+  supabaseConfig: SupabasePublicConfig | null;
+}) {
   return (
     <div className="min-h-full bg-black text-white">
       <div className="relative min-h-full overflow-hidden">
@@ -31,29 +35,19 @@ export function MarketingHome(props: { isLoggedIn: boolean }) {
         <header className="relative z-10 flex items-center justify-between px-6 py-5">
           <TwiqLogo />
           <div className="flex items-center gap-3">
-            {props.isLoggedIn ? (
-              <Link
-                href={PORTAL_PATHS.fo}
-                className="rounded-full bg-[#b5004e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c90058]"
-              >
-                Open portal
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/login"
-                  className="rounded-full bg-[#b5004e] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#c90058]"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
+            <MarketingSessionLink
+              supabaseConfig={props.supabaseConfig}
+              signedOutHref="/login"
+              className="rounded-full border border-white/15 px-4 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
+            >
+              Log in
+            </MarketingSessionLink>
+            <MarketingSessionLink
+              supabaseConfig={props.supabaseConfig}
+              className={primaryCtaClass}
+            >
+              Open portal
+            </MarketingSessionLink>
           </div>
         </header>
 
@@ -70,12 +64,12 @@ export function MarketingHome(props: { isLoggedIn: boolean }) {
               and AI-assisted reads designed for F&amp;O desks that move fast.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                href={props.isLoggedIn ? PORTAL_PATHS.fo : "/login"}
+              <MarketingSessionLink
+                supabaseConfig={props.supabaseConfig}
                 className="rounded-full bg-[#b5004e] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c90058]"
               >
-                {props.isLoggedIn ? "Enter portal" : "Sign in to portal"}
-              </Link>
+                Enter portal
+              </MarketingSessionLink>
               <a
                 href="#features"
                 className="rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/80 hover:bg-white/5"
@@ -112,12 +106,12 @@ export function MarketingHome(props: { isLoggedIn: boolean }) {
               Sign in to access the full TWIQ portal — separate routes for F&amp;O,
               equities, and fin news as we roll them out.
             </p>
-            <Link
-              href={props.isLoggedIn ? PORTAL_PATHS.fo : "/login"}
+            <MarketingSessionLink
+              supabaseConfig={props.supabaseConfig}
               className="mt-6 inline-flex rounded-full bg-[#b5004e] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#c90058]"
             >
-              {props.isLoggedIn ? "Go to F & O desk" : "Log in to TWIQ"}
-            </Link>
+              Go to portal
+            </MarketingSessionLink>
           </section>
         </main>
       </div>

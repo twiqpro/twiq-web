@@ -1,5 +1,10 @@
 import { MarketingHome } from "@/components/MarketingHome";
+import { resolveSupabaseConfig } from "@/lib/supabase/config";
+
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
-  return <MarketingHome isLoggedIn={false} />;
+  const supabaseConfig = resolveSupabaseConfig();
+
+  return <MarketingHome supabaseConfig={supabaseConfig} />;
 }

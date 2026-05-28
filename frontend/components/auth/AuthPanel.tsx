@@ -10,6 +10,7 @@ import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthMessage } from "@/components/auth/AuthMessage";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { PORTAL_PATHS } from "@/lib/auth/paths";
+import { safePortalPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import {
   isSupabaseConfigured,
@@ -81,8 +82,7 @@ export function AuthPanel(props: {
   const [loading, setLoading] = useState(false);
   const [recoveryReady, setRecoveryReady] = useState(false);
 
-  const redirectAfterAuth =
-    nextPath.startsWith("/portal") ? nextPath : PORTAL_PATHS.fo;
+  const redirectAfterAuth = safePortalPath(nextPath);
 
   const authCallbackUrl = useMemo(() => {
     const base = `${props.siteUrl}/auth/callback`;

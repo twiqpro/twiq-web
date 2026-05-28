@@ -6,8 +6,8 @@ import { TwiqBackground } from "@/components/TwiqBackground";
 import { TwiqTopNav } from "@/components/TwiqTopNav";
 import type { PortalUser } from "@/lib/auth/user";
 import { portalUserFromSupabase } from "@/lib/auth/user";
-import { PORTAL_PATHS } from "@/lib/auth/paths";
 import { PortalUserProvider } from "@/lib/auth/portal-user-context";
+import { loginUrlWithNext } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
 import type { SupabasePublicConfig } from "@/lib/supabase/config";
 
@@ -33,10 +33,11 @@ export function PortalShell(props: {
       if (cancelled) return;
 
       if (!session?.user) {
-        const next = encodeURIComponent(
-          window.location.pathname + window.location.search,
+        window.location.replace(
+          loginUrlWithNext(
+            window.location.pathname + window.location.search,
+          ),
         );
-        window.location.replace(`/login?next=${next}`);
         return;
       }
 
@@ -50,7 +51,9 @@ export function PortalShell(props: {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        window.location.replace(`/login?next=${encodeURIComponent(PORTAL_PATHS.fo)}`);
+        window.location.replace(
+          loginUrlWithNext(window.location.pathname),
+        );
         return;
       }
       setUser(portalUserFromSupabase(session.user));
