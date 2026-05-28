@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { InformationCircleIcon } from "@heroicons/react/24/solid";
+import { SparklesIcon } from "@heroicons/react/24/solid";
 
 import type { GammaEstimate } from "@/lib/metricsTypes";
 
@@ -21,6 +22,7 @@ function confidenceTone(confidence: string): string {
 }
 
 export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const { gamma } = props;
   const regime = gamma?.regime ?? "Unavailable";
   const direction = gamma?.direction ?? "Weakening";
@@ -114,7 +116,7 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
       );
     }
     if (!points.length) return fallbackInsights;
-    return points.slice(0, 5);
+    return points.slice(0, 3);
   }, [
     derivedNegativeStrikes,
     derivedPositiveStrikes,
@@ -124,6 +126,29 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
     gamma?.insights,
     regimeChangedIntraday,
   ]);
+  const regimeMeaning = useMemo(() => {
+    const regimeText =
+      regime === "Positive"
+        ? "Estimated positive gamma suggests options positioning may dampen sudden price movement near key strikes."
+        : regime === "Negative"
+          ? "Estimated negative gamma suggests positioning can amplify movement and increase expansion risk."
+          : regime === "Neutral"
+            ? "Estimated neutral gamma suggests stabilizing pressure is balanced and can shift quickly with fresh flow."
+            : "Gamma regime is currently unavailable due to incomplete or low-confidence strike inputs.";
+
+    const directionText =
+      direction === "Strengthening"
+        ? "The current regime pressure is strengthening, so this behavior is becoming more influential."
+        : direction === "Weakening"
+          ? "The current regime pressure is weakening, so this behavior is becoming less dominant."
+          : direction === "Stable"
+            ? "The current regime pressure is stable, so behavior is relatively consistent for now."
+            : direction === "Expansion Risk"
+              ? "Current structure indicates expansion risk, where directional moves can travel faster."
+              : "Current direction signal is not strong enough for a precise interpretation.";
+
+    return `${regimeText} ${directionText}`;
+  }, [direction, regime]);
 
   return (
     <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
@@ -150,102 +175,181 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
         </span>
       </header>
 
-      <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-2.5">
-        <p className="text-sm font-semibold">
-          {regime} Gamma {status === "unavailable" ? "" : "·"}{" "}
-          {status === "unavailable" ? "Unavailable" : direction}
-        </p>
-        <p className="mt-1 text-xs text-white/75">
-          {flipZone != null && status !== "unavailable"
-            ? `Flip Zone: ${flipZone.toLocaleString("en-IN", {
-                maximumFractionDigits: 0,
-              })} · ${computedFlipDistancePoints?.toFixed(0) ?? "—"} pts · ${
-                computedFlipDistancePercent != null
-                  ? `${computedFlipDistancePercent.toFixed(2)}%`
-                  : "—"
-              }`
-            : "Gamma Flip Zone: —"}
-        </p>
+      <div className="mt-3">
+        <div className="inline-flex items-center gap-1.5">
+          <p className="text-[17px] font-semibold leading-6">
+            {regime} Gamma {status === "unavailable" ? "" : "·"}{" "}
+            {status === "unavailable" ? "Unavailable" : direction}
+          </p>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              aria-label="Explain gamma regime and direction"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            >
+              <InformationCircleIcon className="h-4 w-4" />
+            </button>
+            <span className="pointer-events-none absolute left-1/2 top-[125%] z-20 w-80 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              {regimeMeaning}
+            </span>
+          </span>
+        </div>
+        <div className="mt-1 grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[12px] text-white/65">Flip Zone</p>
+            <p className="text-sm font-extrabold text-white/95">
+              {flipZone != null && status !== "unavailable"
+                ? flipZone.toLocaleString("en-IN", { maximumFractionDigits: 0 })
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[12px] text-white/65">Distance</p>
+            <p className="text-sm font-extrabold text-white/95">
+              {computedFlipDistancePoints != null && gamma?.spot != null
+                ? `${computedFlipDistancePoints.toFixed(0)} pts ${
+                    gamma.spot >= (flipZone ?? gamma.spot) ? "above" : "below"
+                  } · ${
+                    computedFlipDistancePercent != null
+                      ? `${computedFlipDistancePercent.toFixed(2)}%`
+                      : "—"
+                  }`
+                : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+        <div>
+          <p className="text-[12px] text-white/65">Spot</p>
+          <p className="text-sm font-extrabold text-white/95">
+            {spotPosition.replace("main gamma ", "")}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] text-white/65">Pressure</p>
+          <p className="text-sm font-extrabold text-white/95">
+            {nearNetGammaIndex == null ? "—" : nearNetGammaIndex.toFixed(1)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] text-white/65">Above</p>
+          <p className="text-sm font-extrabold text-white/95">
+            {computedAboveShare == null ? "—" : `${computedAboveShare.toFixed(1)}%`}
+          </p>
+        </div>
+        <div>
+          <p className="text-[12px] text-white/65">Impact</p>
+          <p className="text-sm font-extrabold text-white/95">
+            {highImpactStrike != null
+              ? highImpactStrike.toLocaleString("en-IN", { maximumFractionDigits: 0 })
+              : "—"}
+          </p>
+        </div>
+      </div>
+      <div className="space-y-1.5 text-[12px] leading-5 text-white/90">
+        <div className="flex items-start gap-1.5">
+          <p>
+            <span className="font-semibold text-emerald-300">Positive Gamma:</span>{" "}
+            <span className="text-white/90">
+              {derivedPositiveStrikes.length
+                ? derivedPositiveStrikes
+                    .slice(0, 3)
+                    .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
+                    .join(", ")
+                : "—"}
+            </span>
+          </p>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              aria-label="Explain positive gamma"
+              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            >
+              <InformationCircleIcon className="h-3.5 w-3.5" />
+            </button>
+            <span className="pointer-events-none absolute left-1/2 top-[125%] z-20 w-72 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Positive gamma strikes are zones where estimated options positioning may
+              help stabilize price movement and reduce expansion.
+            </span>
+          </span>
+        </div>
+        <div className="mt-1 flex items-start gap-1.5">
+          <p>
+            <span className="font-semibold text-rose-300">Negative Gamma:</span>{" "}
+            <span className="text-white/90">
+              {derivedNegativeStrikes.length
+                ? derivedNegativeStrikes
+                    .slice(0, 3)
+                    .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
+                    .join(", ")
+                : "—"}
+            </span>
+          </p>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              aria-label="Explain negative gamma"
+              className="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            >
+              <InformationCircleIcon className="h-3.5 w-3.5" />
+            </button>
+            <span className="pointer-events-none absolute left-1/2 top-[125%] z-20 w-72 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              Negative gamma strikes are zones where estimated options positioning can
+              amplify movement and increase expansion risk.
+            </span>
+          </span>
+        </div>
       </div>
 
-      <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.02] p-2.5 text-[11px] text-white/80">
-        <p>
-          Dominant +Gamma:{" "}
-          {derivedPositiveStrikes.length
-            ? derivedPositiveStrikes
-                .slice(0, 3)
-                .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
-                .join(" / ")
-            : "—"}
-        </p>
-        <p className="mt-1">
-          Dominant -Gamma:{" "}
-          {derivedNegativeStrikes.length
-            ? derivedNegativeStrikes
-                .slice(0, 3)
-                .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
-                .join(" / ")
-            : "—"}
-        </p>
-        <p className="mt-1">Spot Position: {spotPosition}</p>
-        <p className="mt-1">
-          Regime Pressure Index: {nearNetGammaIndex == null ? "—" : `${nearNetGammaIndex.toFixed(2)}`}{" "}
-          | Above Share: {computedAboveShare == null ? "—" : `${computedAboveShare.toFixed(1)}%`} | Below Share:{" "}
-          {computedBelowShare == null ? "—" : `${computedBelowShare.toFixed(1)}%`}
-        </p>
-        <p className="mt-1 text-white/65">
-          Raw est. near-gamma: {formatCompactNumber(nearNetGamma)} | Above:{" "}
-          {formatCompactNumber(aboveConcentration)} | Below: {formatCompactNumber(belowConcentration)}
-        </p>
-        <p className="mt-1">
-          Nearest high-impact strike:{" "}
-          {highImpactStrike != null
-            ? highImpactStrike.toLocaleString("en-IN", { maximumFractionDigits: 0 })
-            : "—"}
-        </p>
+      <div className="my-3 h-px w-full bg-white/10" />
+
+      <div className="mb-1 inline-flex items-center gap-1.5">
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#b5004e]/20 text-[#f472b6]">
+          <SparklesIcon className="h-3.5 w-3.5" />
+        </span>
+        <p className="text-sm font-semibold text-white/95">AI Insights</p>
       </div>
-
-      <div className="my-4 h-px w-full bg-white/10" />
-
-      <ul className="list-disc space-y-1 pl-4 text-sm italic leading-5 text-white/95">
+      <ul className="list-disc space-y-1 pl-4 text-sm leading-5 text-white/95">
         {proInsights.map((point, idx) => (
           <li key={idx}>{point}</li>
         ))}
       </ul>
 
-      <div className="mt-3 max-h-60 overflow-auto rounded-lg border border-white/10">
-        <table className="w-full border-collapse text-[11px]">
-          <thead className="bg-white/5 text-white/70">
-            <tr>
-              <th className="px-2 py-1 text-left font-medium">Strike</th>
-              <th className="px-2 py-1 text-right font-medium">Est. GEX</th>
-              <th className="px-2 py-1 text-right font-medium">Call OI</th>
-              <th className="px-2 py-1 text-right font-medium">Put OI</th>
-              <th className="px-2 py-1 text-right font-medium">IV</th>
-              <th className="px-2 py-1 text-right font-medium">Dist</th>
-              <th className="px-2 py-1 text-left font-medium">Contribution</th>
-            </tr>
-          </thead>
-          <tbody>
-            {strikeRows.map((row) => (
-              <tr key={`${row.strike}-${row.contribution_label}`} className="border-t border-white/10">
-                <td className="px-2 py-1">{row.strike.toFixed(0)}</td>
-                <td className="px-2 py-1 text-right">{row.estimated_gex.toLocaleString("en-IN")}</td>
-                <td className="px-2 py-1 text-right">{row.call_oi.toLocaleString("en-IN")}</td>
-                <td className="px-2 py-1 text-right">{row.put_oi.toLocaleString("en-IN")}</td>
-                <td className="px-2 py-1 text-right">
-                  {row.iv == null ? "—" : `${row.iv.toFixed(1)}%`}
-                </td>
-                <td className="px-2 py-1 text-right">
-                  {row.distance_from_spot >= 0 ? "+" : ""}
-                  {row.distance_from_spot.toFixed(0)}
-                </td>
-                <td className="px-2 py-1">{row.contribution_label}</td>
+      <button
+        type="button"
+        className="mt-3 rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
+        onClick={() => setShowBreakdown((v) => !v)}
+      >
+        {showBreakdown ? "Hide Strike Breakdown" : "View Strike Breakdown"}
+      </button>
+
+      {showBreakdown ? (
+        <div className="mt-3 max-h-60 overflow-auto rounded-lg border border-white/10">
+          <table className="w-full border-collapse text-[11px]">
+            <thead className="bg-white/5 text-white/70">
+              <tr>
+                <th className="px-2 py-1 text-left font-medium">Strike</th>
+                <th className="px-2 py-1 text-right font-medium">GEX</th>
+                <th className="px-2 py-1 text-right font-medium">Call OI</th>
+                <th className="px-2 py-1 text-right font-medium">Put OI</th>
+                <th className="px-2 py-1 text-left font-medium">Impact</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {strikeRows.map((row) => (
+                <tr key={`${row.strike}-${row.contribution_label}`} className="border-t border-white/10">
+                  <td className="px-2 py-1">{row.strike.toFixed(0)}</td>
+                  <td className="px-2 py-1 text-right">{formatCompactNumber(row.estimated_gex)}</td>
+                  <td className="px-2 py-1 text-right">{formatCompactNumber(row.call_oi)}</td>
+                  <td className="px-2 py-1 text-right">{formatCompactNumber(row.put_oi)}</td>
+                  <td className="px-2 py-1">{row.contribution_label}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </section>
   );
 }
