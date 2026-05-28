@@ -61,7 +61,7 @@ function metricsToCards(metrics: {
       [
         {
           label: "Nifty Futures",
-          value: formatPrice(metrics.futures ?? metrics.spot),
+          value: formatPrice(metrics.futures),
         },
         { label: "OI Resistance", value: formatPrice(metrics.oi_resistance) },
         {
@@ -107,7 +107,7 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,670px)_345px_345px] lg:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,670px)_345px_345px] lg:gap-4">
         <section className="flex flex-col gap-4">
           <div className="h-[415px] w-full">
             <NiftyChartLite
@@ -135,7 +135,7 @@ export function NiftyDashboard(props: { imgAiSpark: string }) {
           <MetricsCard {...cardProps} />
         </section>
 
-        <section className="w-full rounded-2xl bg-[#12171d] p-6">
+        <section className="w-full rounded-2xl bg-[#121212] p-6">
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-md bg-[linear-gradient(90deg,rgb(235,47,150)_0%,rgb(133,27,85)_100%)] px-3 py-1.5 text-sm font-medium"

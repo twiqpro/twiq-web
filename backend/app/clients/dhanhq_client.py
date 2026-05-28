@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -48,6 +50,35 @@ class DhanHQClient:
             raise DhanHQAPIError(str(exc), status_code=401) from exc
         headers["Content-Type"] = "application/json"
         return headers
+
+    async def _request_text(
+        self,
+        method: str,
+        url: str,
+    ) -> str:
+        last_error: Optional[Exception] = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.request(method, url)
+                if response.status_code >= 400:
+                    if response.status_code >= 500 and attempt < MAX_RETRIES - 1:
+                        await asyncio.sleep(RETRY_BASE_DELAY * (2**attempt))
+                        continue
+                    raise DhanHQAPIError(
+                        f"DhanHQ text request failed ({response.status_code}): "
+                        f"{response.text[:400]}",
+                        status_code=response.status_code,
+                    )
+                return response.text
+            except (httpx.TransportError, httpx.TimeoutException) as exc:
+                last_error = exc
+                logger.warning(
+                    "DhanHQ text request error (attempt %s): %s", attempt + 1, exc
+                )
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(RETRY_BASE_DELAY * (2**attempt))
+        raise DhanHQAPIError(f"DhanHQ text request failed after retries: {last_error}")
 
     async def _request(
         self,
@@ -247,6 +278,79 @@ class DhanHQClient:
             "Expiry": expiry,
         }
         return await self._request("POST", "/optionchain", json_body=body)
+
+    async def resolve_next_index_future(
+        self,
+        preferred_symbols: list[str],
+    ) -> Optional[dict[str, str]]:
+        """Resolve nearest-expiry index future from Dhan scrip master.
+
+        Tries symbols in order (e.g. GIFTNIFTY first, then NIFTY).
+        Returns dict with security_id, exchange_segment and symbol, or None.
+        """
+        csv_text = await self._request_text("GET", self.settings.dhanhq_scrip_master_url)
+        reader = csv.DictReader(io.StringIO(csv_text))
+        now = datetime.now(IST)
+
+        rows: list[dict[str, Any]] = []
+        for row in reader:
+            if row.get("SEM_SEGMENT") != "D":
+                continue
+            if row.get("SEM_INSTRUMENT_NAME") != "FUTIDX":
+                continue
+            if row.get("SEM_EXM_EXCH_ID") != "NSE":
+                continue
+
+            trading_symbol = (row.get("SEM_TRADING_SYMBOL") or "").strip().upper()
+            if "-FUT" not in trading_symbol:
+                continue
+            base_symbol = trading_symbol.split("-")[0]
+
+            expiry_raw = (row.get("SEM_EXPIRY_DATE") or "").strip()
+            if not expiry_raw:
+                continue
+            try:
+                expiry_dt = datetime.strptime(expiry_raw, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=IST
+                )
+            except ValueError:
+                continue
+
+            if expiry_dt < now:
+                continue
+
+            security_id = (row.get("SEM_SMST_SECURITY_ID") or "").strip()
+            if not security_id:
+                continue
+
+            rows.append(
+                {
+                    "base_symbol": base_symbol,
+                    "security_id": security_id,
+                    "expiry": expiry_dt,
+                    "trading_symbol": trading_symbol,
+                }
+            )
+
+        if not rows:
+            return None
+
+        normalized_preferences = [s.strip().upper() for s in preferred_symbols if s.strip()]
+        if not normalized_preferences:
+            normalized_preferences = ["NIFTY"]
+
+        for pref in normalized_preferences:
+            candidates = [r for r in rows if r["base_symbol"] == pref]
+            if not candidates:
+                continue
+            nearest = min(candidates, key=lambda r: r["expiry"])
+            return {
+                "security_id": nearest["security_id"],
+                "exchange_segment": "NSE_FNO",
+                "symbol": nearest["trading_symbol"],
+            }
+
+        return None
 
     async def get_market_ohlc(
         self,

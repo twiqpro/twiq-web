@@ -1,0 +1,12 @@
+---
+description: Use Heroicons for all UI iconography
+alwaysApply: true
+---
+
+# Heroicons Standard
+
+- Use `@heroicons/react` for React icon usage in this project.
+- Prefer `24/outline` icons unless a design specifically needs `24/solid`.
+- Import icons by name (e.g. `InformationCircleIcon`) instead of inline SVG.
+- Keep icon size and color controlled via Tailwind classes on the component.
+- Do not add a second icon package unless explicitly requested.

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     dhanhq_access_token: str = ""
     dhanhq_client_id: str = ""
     dhanhq_base_url: str = "https://api.dhan.co/v2"
+    dhanhq_scrip_master_url: str = "https://images.dhan.co/api-data/api-scrip-master.csv"
 
     # Nifty 50 index — Dhan SECURITY_ID 13
     nifty_security_id: str = "13"
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     # Optional live metrics (Dhan instrument master security IDs)
     nifty_futures_security_id: str = ""
     nifty_futures_exchange_segment: str = "NSE_FNO"
+    nifty_futures_symbol_preference: str = "GIFTNIFTY,NIFTY"
     # India VIX index — Dhan SECURITY_ID 21 (NSE index segment IDX_I)
     india_vix_security_id: str = "21"
     india_vix_exchange_segment: str = "IDX_I"

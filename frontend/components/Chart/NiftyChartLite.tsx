@@ -5,6 +5,7 @@ import {
   CandlestickSeries,
   ColorType,
   LineStyle,
+  TickMarkType,
   createChart,
   type CandlestickData,
   type IChartApi,
@@ -21,6 +22,54 @@ import { ChartToolbar } from "./ChartToolbar";
 import { OIProfileOverlay } from "./OIProfileOverlay";
 
 const CHART_BG = "#121212";
+const IST_TIMEZONE = "Asia/Kolkata";
+
+function toDateFromLwTime(time: Time): Date {
+  if (typeof time === "number") {
+    return new Date(time * 1000);
+  }
+  if (typeof time === "string") {
+    const parsed = new Date(`${time}T00:00:00+05:30`);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+  if ("timestamp" in time && typeof time.timestamp === "number") {
+    return new Date(time.timestamp * 1000);
+  }
+  if ("year" in time && "month" in time && "day" in time) {
+    return new Date(Date.UTC(time.year, time.month - 1, time.day));
+  }
+  return new Date();
+}
+
+function formatIstTick(time: Time, tickMarkType: TickMarkType): string {
+  const dt = toDateFromLwTime(time);
+  if (tickMarkType === TickMarkType.Year) {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: IST_TIMEZONE,
+      year: "numeric",
+    }).format(dt);
+  }
+  if (tickMarkType === TickMarkType.Month) {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: IST_TIMEZONE,
+      month: "short",
+      year: "2-digit",
+    }).format(dt);
+  }
+  if (tickMarkType === TickMarkType.DayOfMonth) {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: IST_TIMEZONE,
+      day: "2-digit",
+      month: "short",
+    }).format(dt);
+  }
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: IST_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(dt);
+}
 
 /** Must match toolbar `h-12` (3rem) — chart height must fit inside padded area or time axis clips. */
 const CHART_TOOLBAR_PX = 48;
@@ -89,6 +138,7 @@ export function NiftyChartLite(props: {
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [chart, setChart] = useState<IChartApi | null>(null);
   const [series, setSeries] = useState<ISeriesApi<"Candlestick"> | null>(null);
+  const [bulkDataVersion, setBulkDataVersion] = useState(0);
 
   const [candles, setCandles] = useState<ChartCandle[]>(() => defaultCandles());
   const last = candles[candles.length - 1];
@@ -134,7 +184,7 @@ export function NiftyChartLite(props: {
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "#1f2937" },
+        vertLines: { visible: false },
         horzLines: { visible: false },
       },
       width: el.clientWidth,
@@ -142,11 +192,24 @@ export function NiftyChartLite(props: {
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
+        // Avoid displaying “empty time” ticks (e.g. outside market hours)
+        // when the dataset has gaps.
+        ignoreWhitespaceIndices: true,
+        tickMarkFormatter: formatIstTick,
         borderVisible: true,
         borderColor: "#374151",
       },
       localization: {
         priceFormatter: formatChartPrice,
+        timeFormatter: (time: Time) =>
+          new Intl.DateTimeFormat("en-IN", {
+            timeZone: IST_TIMEZONE,
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }).format(toDateFromLwTime(time)),
       },
       rightPriceScale: { borderColor: "#374151", minimumWidth: 72 },
       crosshair: {
@@ -161,8 +224,12 @@ export function NiftyChartLite(props: {
       borderVisible: false,
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
-      lastValueVisible: false,
-      priceLineVisible: false,
+      // Show only a dashed current-price guide + numeric label on scale.
+      lastValueVisible: true,
+      priceLineVisible: true,
+      priceLineStyle: LineStyle.Dashed,
+      priceLineColor: "rgba(255,255,255,0.55)",
+      priceLineWidth: 1,
     });
 
     chart.applyOptions({
@@ -208,6 +275,7 @@ export function NiftyChartLite(props: {
         if (cancelled) return;
         setError(null);
         setCandles(data);
+        setBulkDataVersion((v) => v + 1);
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -220,11 +288,14 @@ export function NiftyChartLite(props: {
   }, [interval]);
 
   useEffect(() => {
+    // Only do full resets on bulk historical loads (interval change / initial load).
+    // Live ticks are applied via `series.update(...)` and should NOT re-fit content,
+    // otherwise the chart snaps back to the right edge while the user is dragging.
     if (!series || !candles.length) return;
     series.setData(candles.map(toLw));
     chart?.timeScale().fitContent();
     queueMicrotask(() => setTick((t) => t + 1));
-  }, [series, chart, candles]);
+  }, [series, chart, bulkDataVersion]);
 
   useEffect(() => {
     if (!series) return;
@@ -297,7 +368,7 @@ export function NiftyChartLite(props: {
   }, [series, interval]);
 
   return (
-    <div className="relative h-full w-full overflow-x-hidden overflow-y-visible rounded-t-md bg-[#121212]">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#121212]">
       <div className="absolute inset-x-0 top-0 z-30">
         <ChartToolbar
           title="Nifty 50"

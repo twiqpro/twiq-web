@@ -45,6 +45,10 @@ class NiftyMetricsAggregator:
         self.expiry: str = ""
         self.spot: float = 0.0
         self.futures_ltp: Optional[float] = None
+        self._futures_security_id: Optional[str] = (
+            str(self.settings.nifty_futures_security_id).strip() or None
+        )
+        self._futures_exchange_segment: str = self.settings.nifty_futures_exchange_segment
         self.vix_ltp: Optional[float] = None
         self.vix_prev_close: Optional[float] = None
         self._rows_by_strike: dict[float, OIStrikeRow] = {}
@@ -63,11 +67,11 @@ class NiftyMetricsAggregator:
                 security_id=str(self.settings.nifty_security_id),
             ),
         ]
-        if self.settings.nifty_futures_security_id:
+        if self._futures_security_id:
             instruments.append(
                 FeedInstrument(
-                    exchange_segment=self.settings.nifty_futures_exchange_segment,
-                    security_id=str(self.settings.nifty_futures_security_id),
+                    exchange_segment=self._futures_exchange_segment,
+                    security_id=str(self._futures_security_id),
                 )
             )
         if self.settings.india_vix_security_id:
@@ -87,6 +91,7 @@ class NiftyMetricsAggregator:
         return instruments
 
     async def bootstrap(self, expiry: Optional[str] = None) -> None:
+        await self._resolve_futures_instrument()
         underlying = self.settings.nifty_security_id
         segment = self.settings.nifty_exchange_segment
 
@@ -120,24 +125,85 @@ class NiftyMetricsAggregator:
 
     async def _bootstrap_index_quotes(self) -> None:
         """Seed index LTP / prev close via REST so UI is populated before WS ticks."""
-        seg = self.settings.india_vix_exchange_segment
+        body: dict[str, list[int]] = {}
+
+        if self._futures_security_id:
+            body.setdefault(self._futures_exchange_segment, []).append(
+                int(self._futures_security_id)
+            )
+
+        vix_seg = self.settings.india_vix_exchange_segment
         vix_id = self.settings.india_vix_security_id
-        if not vix_id:
+        if vix_id:
+            body.setdefault(vix_seg, []).append(int(vix_id))
+
+        if not body:
             return
 
-        body: dict[str, list[int]] = {seg: [int(vix_id)]}
         try:
             data = await self._client.get_market_ohlc(body)
         except Exception as exc:
             logger.warning("Index OHLC bootstrap failed: %s", exc)
             return
 
-        ltp, prev = self._client.extract_segment_quote(data, seg, vix_id)
+        futures_ltp = None
+        if self._futures_security_id:
+            futures_ltp, _ = self._client.extract_segment_quote(
+                data, self._futures_exchange_segment, self._futures_security_id
+            )
+            if futures_ltp is None:
+                try:
+                    fut_candles = await self._client.get_historical_data(
+                        security_id=str(self._futures_security_id),
+                        exchange_segment=self._futures_exchange_segment,
+                        instrument="FUTIDX",
+                        interval="1M",
+                        limit=1,
+                        include_oi=False,
+                    )
+                    if fut_candles:
+                        futures_ltp = fut_candles[-1].close
+                except Exception as exc:
+                    logger.warning("Futures historical bootstrap failed: %s", exc)
+
+        ltp, prev = (
+            self._client.extract_segment_quote(data, vix_seg, vix_id)
+            if vix_id
+            else (None, None)
+        )
         async with self._lock:
+            if futures_ltp is not None:
+                self.futures_ltp = futures_ltp
             if ltp is not None:
                 self.vix_ltp = ltp
             if prev is not None:
                 self.vix_prev_close = prev
+
+    async def _resolve_futures_instrument(self) -> None:
+        if self._futures_security_id:
+            return
+
+        preferences = [
+            s.strip()
+            for s in self.settings.nifty_futures_symbol_preference.split(",")
+            if s.strip()
+        ]
+        try:
+            resolved = await self._client.resolve_next_index_future(preferences)
+        except Exception as exc:
+            logger.warning("Futures instrument auto-discovery failed: %s", exc)
+            return
+        if not resolved:
+            logger.warning("No matching futures instrument found for %s", preferences)
+            return
+
+        self._futures_security_id = resolved["security_id"]
+        self._futures_exchange_segment = resolved["exchange_segment"]
+        logger.info(
+            "Resolved futures instrument: %s (%s)",
+            resolved["symbol"],
+            self._futures_security_id,
+        )
 
     async def apply_feed_event(
         self,
@@ -225,10 +291,7 @@ class NiftyMetricsAggregator:
                 return True
             return False
 
-        if (
-            self.settings.nifty_futures_security_id
-            and sid == str(self.settings.nifty_futures_security_id)
-        ):
+        if self._futures_security_id and sid == str(self._futures_security_id):
             if self.futures_ltp != event.price:
                 self.futures_ltp = event.price
                 return True

@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { InformationCircleIcon } from "@heroicons/react/24/solid";
 
 import { OIBarChart } from "@/components/OpenInterest/OIBarChart";
-import { formatOiCr } from "@/lib/formatOi";
+import { formatOiCompact, formatOiCr } from "@/lib/formatOi";
 import { OI_PANEL_INTERVALS, type OiIntervalKey } from "@/lib/oiIntervals";
 import type { OIProfileStrike } from "@/lib/chartTypes";
 
@@ -32,7 +33,6 @@ export function OpenInterestPanel(props: {
     supportLevel,
     resistanceLevel,
     maxPain,
-    pcr,
     expiryLabel,
     historyReady = false,
     height = 419,
@@ -53,13 +53,24 @@ export function OpenInterestPanel(props: {
       call += row.call_oi;
       put += row.put_oi;
     }
-    const computedPcr = call > 0 ? put / call : 0;
-    return { call, put, pcr: pcr ?? computedPcr };
-  }, [visible, pcr]);
+    return { call, put };
+  }, [visible]);
+
+  const maxAbsDelta = useMemo(() => {
+    if (!historyReady) return null;
+    let maxAbs = 0;
+    for (const row of visible) {
+      const change = row.oi_changes?.[interval];
+      const callAbs = Math.abs(change?.call_oi_change ?? 0);
+      const putAbs = Math.abs(change?.put_oi_change ?? 0);
+      maxAbs = Math.max(maxAbs, callAbs, putAbs);
+    }
+    return maxAbs;
+  }, [visible, interval, historyReady]);
 
   return (
     <div
-      className="flex w-full flex-col overflow-hidden rounded-b-md bg-[#121212] text-white"
+      className="flex w-full flex-col overflow-hidden rounded-2xl bg-[#121212] text-white"
       style={{ height }}
     >
       <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-2">
@@ -161,18 +172,35 @@ export function OpenInterestPanel(props: {
         })}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 border-t border-white/10 bg-[#0f141a] px-4 py-3 text-center">
-        <div>
+      <div className="grid grid-cols-3 gap-2 border-t border-white/10 bg-[#121212] px-4 py-3 text-center">
+        <div className="rounded-md bg-white/[0.04] py-2">
           <p className="text-[10px] text-white/50">Total Call OI</p>
           <p className="text-sm font-semibold">{formatOiCr(totals.call)}</p>
         </div>
-        <div>
+        <div className="rounded-md bg-white/[0.04] py-2">
           <p className="text-[10px] text-white/50">Total Put OI</p>
           <p className="text-sm font-semibold">{formatOiCr(totals.put)}</p>
         </div>
-        <div>
-          <p className="text-[10px] text-white/50">PCR</p>
-          <p className="text-sm font-semibold">{totals.pcr.toFixed(2)}</p>
+        <div className="rounded-md bg-white/[0.04] py-2">
+          <div className="inline-flex items-center justify-center gap-1">
+            <p className="text-[10px] text-white/50">Max |ΔOI| ({interval})</p>
+            <span className="group relative inline-flex">
+              <button
+                type="button"
+                aria-label="Explain Max Delta OI"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              >
+                <InformationCircleIcon className="h-4 w-4" />
+              </button>
+              <span className="pointer-events-none absolute bottom-[130%] left-1/2 z-20 w-48 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                Highest absolute OI change among visible strikes for this interval.
+                Higher value means stronger participation shift in calls or puts.
+              </span>
+            </span>
+          </div>
+          <p className="text-sm font-semibold">
+            {maxAbsDelta == null ? "—" : formatOiCompact(maxAbsDelta)}
+          </p>
         </div>
       </div>
       <p className="pb-3 text-center text-[10px] text-white/45">

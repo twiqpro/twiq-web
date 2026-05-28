@@ -1,5 +1,5 @@
 from bisect import bisect_right
-from typing import Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 from time import time
 
@@ -39,7 +39,7 @@ class OiHistoryStore:
             self._timestamps.pop(0)
             self._snapshots.pop(0)
 
-    def lookup_at(self, target_ts: int) -> dict[float, StrikeOiSnapshot] | None:
+    def lookup_at(self, target_ts: int) -> Optional[Dict[float, StrikeOiSnapshot]]:
         if not self._timestamps:
             return None
         idx = bisect_right(self._timestamps, target_ts) - 1

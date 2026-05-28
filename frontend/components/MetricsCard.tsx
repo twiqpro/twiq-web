@@ -13,7 +13,7 @@ export function MetricsCard(props: {
   const { pcrLabel, expiryLabel, columns, note } = props;
 
   return (
-    <section className="w-full rounded-2xl bg-[#12171d] p-6 text-white">
+    <section className="w-full rounded-2xl bg-[#121212] p-6 text-white">
       <header className="flex items-center justify-between gap-4">
         <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
           {pcrLabel}

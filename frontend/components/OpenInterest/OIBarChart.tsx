@@ -81,6 +81,7 @@ function drawBarWithChange(
 ) {
   const curH = current > 0 ? scale(current) : 0;
   const yCur = baseline - curH;
+  const MIN_DELTA_PX = 2;
 
   if (!showChange || change == null || change === 0) {
     ctx.fillStyle = fill;
@@ -91,19 +92,48 @@ function drawBarWithChange(
   const prev = Math.max(0, current - change);
   const prevH = scale(prev);
   const yPrev = baseline - prevH;
+  const deltaPx = Math.abs(prevH - curH);
 
   if (change > 0) {
+    // Previous OI as solid base.
     ctx.fillStyle = fill;
+    ctx.globalAlpha = 0.65;
     ctx.fillRect(x, yPrev, w, prevH);
-    fillHatch(ctx, x, yCur, w, curH - prevH, fill);
+    ctx.globalAlpha = 1;
+
+    // Increase region as strong hatched overlay.
+    const incTop = Math.min(yCur, yPrev);
+    let incH = Math.max(0, curH - prevH);
+    if (incH > 0 && incH < MIN_DELTA_PX) incH = MIN_DELTA_PX;
+    fillHatch(ctx, x, incTop, w, incH, fill);
+
+    // Emphasize top edge so tiny increases remain visible.
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, yCur + 0.5);
+    ctx.lineTo(x + w - 0.5, yCur + 0.5);
+    ctx.stroke();
   } else {
+    // Draw previous OI as a hollow bar (clear "decrease" cue).
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(x + 0.5, yPrev + 0.5, w - 1, Math.max(1, prevH - 1));
+
+    // Current OI as inner filled bar.
     ctx.fillStyle = fill;
-    ctx.fillRect(x, yCur, w, curH);
-    const decH = prevH - curH;
-    if (decH > 0) {
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + 0.5, yPrev, w - 1, decH);
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(x + 1, yCur, Math.max(1, w - 2), curH);
+    ctx.globalAlpha = 1;
+
+    // If decrease is tiny, add explicit hollow cap so it's still noticeable.
+    if (deltaPx > 0 && deltaPx < MIN_DELTA_PX) {
+      ctx.strokeStyle = "rgba(255,255,255,0.6)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, yCur + 0.5);
+      ctx.lineTo(x + w - 0.5, yCur + 0.5);
+      ctx.stroke();
     }
   }
 }
@@ -331,6 +361,7 @@ export function OIBarChart({
         CALL_STROKE,
       );
     }
+
   }, [
     strikes,
     spot,

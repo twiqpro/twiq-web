@@ -10,7 +10,7 @@ export default function Home() {
       <div className="relative min-h-full overflow-x-hidden">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[220px]"
+          className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage: [
               // dot grid
@@ -22,9 +22,10 @@ export default function Home() {
               // subtle left-side depth
               "radial-gradient(70% 120% at 20% 0%, rgba(181,0,78,0.22) 0%, rgba(11,15,20,0) 65%)",
             ].join(", "),
-            backgroundSize: ["14px 14px", "100% 100%", "100% 100%", "100% 100%"]
+            backgroundSize: ["14px 14px", "100% 220px", "100% 100%", "100% 100%"]
               .join(", "),
             backgroundPosition: ["0 0", "0 0", "0 0", "0 0"].join(", "),
+            backgroundRepeat: ["repeat", "no-repeat", "no-repeat", "no-repeat"].join(", "),
           }}
         />
 

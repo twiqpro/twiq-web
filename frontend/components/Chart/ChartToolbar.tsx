@@ -23,7 +23,7 @@ export function ChartToolbar(props: {
   } = props;
 
   return (
-    <div className="flex h-12 w-full items-center justify-between bg-[#0f141a] px-4 text-white">
+    <div className="flex h-12 w-full items-center justify-between bg-[#121212] px-4 text-white">
       <div className="text-sm font-semibold">{title}</div>
 
       <div className="flex items-center gap-4">
