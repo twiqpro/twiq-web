@@ -15,7 +15,7 @@ export function HeroShaderBackdrop() {
     >
       <ShaderAnimation className="absolute inset-0 h-full w-full" />
       <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgba(181,0,78,0.35),transparent_65%)]"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_80%_45%_at_50%_-8%,rgba(181,0,78,0.38),transparent_62%)]"
         aria-hidden
       />
     </div>

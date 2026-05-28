@@ -11,7 +11,8 @@ import { primaryCtaClass } from "./brand";
 import { HeroShaderBackdrop } from "./HeroShaderBackdrop";
 import { useReducedMotion } from "./useReducedMotion";
 
-const headlineLines = ["Quant-grade Nifty structure.", "AI clarity, not noise."];
+const headline =
+  "Quant-grade AI intelligence for retail traders — all signal, no noise.";
 
 const fadeUp = (delay: number, reduced: boolean) =>
   reduced
@@ -45,10 +46,13 @@ export function LandingHero(props: { supabaseConfig: SupabasePublicConfig | null
   const heroOpacity = reduced ? 1 : 1 - scrollProgress * 0.35;
 
   return (
-    <section ref={sectionRef} className="relative grid w-full">
+    <section
+      ref={sectionRef}
+      className="relative grid h-[100svh] w-full scroll-mt-0 items-start"
+    >
       {!reduced ? (
         <motion.div
-          className="pointer-events-none sticky top-0 col-start-1 row-start-1 z-0 h-[100svh] w-full self-start overflow-hidden"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
           style={{ opacity: shimmerOpacity, visibility: shimmerVisible }}
           aria-hidden
         >
@@ -56,7 +60,7 @@ export function LandingHero(props: { supabaseConfig: SupabasePublicConfig | null
         </motion.div>
       ) : null}
 
-      <div className="relative z-10 col-start-1 row-start-1 mx-auto min-h-[100svh] w-full max-w-[1100px] px-4 pb-10 pt-2 sm:px-6 lg:pb-12">
+      <div className="relative z-10 col-start-1 row-start-1 mx-auto flex h-[100svh] w-full max-w-[1100px] flex-col self-start px-4 pb-16 pt-2 sm:px-6 sm:pb-20">
         <motion.header
           className="flex items-center justify-between"
           {...fadeUp(0, reduced)}
@@ -71,63 +75,60 @@ export function LandingHero(props: { supabaseConfig: SupabasePublicConfig | null
           </MarketingSessionLink>
         </motion.header>
 
-        <motion.div
-          className="mt-10 max-w-3xl pt-[138px] lg:mt-14"
-          style={{
-            y: heroLift,
-            scale: heroScale,
-            opacity: heroOpacity,
-            transformOrigin: "top center",
-          }}
-        >
-          <motion.p
-            className="mb-4 inline-flex rounded-full border border-[#b5004e]/40 bg-[#b5004e]/10 px-3 py-1 text-xs font-semibold tracking-wide text-[#f472b6]"
-            {...fadeUp(0.12, reduced)}
-          >
-            Pro Insights for Retail Traders
-          </motion.p>
-
-          <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight text-white/95 sm:text-5xl lg:text-[3.25rem]">
-            {headlineLines.map((line, i) => (
-              <motion.span
-                key={line}
-                className="block"
-                initial={reduced ? false : { opacity: 0, y: 22 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: reduced ? 0 : 0.22 + i * 0.1,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-              >
-                {line}
-              </motion.span>
-            ))}
-          </h1>
-
-          <motion.p
-            className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg sm:leading-8"
-            {...fadeUp(0.48, reduced)}
-          >
-            TWIQ is your options intelligence portal — realtime charts, OI context, and
-            AI-assisted reads designed for F&amp;O desks that move fast.
-          </motion.p>
-
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
           <motion.div
-            className="mt-8 flex flex-wrap items-center gap-3"
-            initial={reduced ? false : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: reduced ? 0 : 0.62, ease: [0.22, 1, 0.36, 1] }}
+            className="flex max-w-3xl flex-col"
+            style={{
+              y: heroLift,
+              scale: heroScale,
+              opacity: heroOpacity,
+              transformOrigin: "center center",
+            }}
           >
-            <MarketingSessionLink
-              supabaseConfig={props.supabaseConfig}
-              signedOutHref="/login"
-              className="rounded-full bg-[#b5004e] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c90058] hover:shadow-[0_0_28px_rgba(181,0,78,0.4)]"
+            <motion.p
+              className="mb-4 inline-flex w-fit rounded-full border border-[#b5004e]/40 bg-[#b5004e]/10 px-3 py-1 text-xs font-semibold tracking-wide text-[#f472b6]"
+              {...fadeUp(0.12, reduced)}
             >
-              Login
-            </MarketingSessionLink>
+              Pro Insights for Retail Traders
+            </motion.p>
+
+            <motion.h1
+              className="text-4xl font-semibold leading-[1.12] tracking-tight text-white/95 sm:text-5xl lg:text-[3.25rem]"
+              initial={reduced ? false : { opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: reduced ? 0 : 0.22,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              {headline}
+            </motion.h1>
+
+            <motion.p
+              className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg sm:leading-8"
+              {...fadeUp(0.48, reduced)}
+            >
+              TWIQ is your options intelligence portal — realtime charts, OI context, and
+              AI-assisted reads designed for F&amp;O desks that move fast.
+            </motion.p>
+
+            <motion.div
+              className="mt-8 flex flex-wrap items-center gap-3"
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: reduced ? 0 : 0.62, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <MarketingSessionLink
+                supabaseConfig={props.supabaseConfig}
+                signedOutHref="/login"
+                className="rounded-full bg-[#b5004e] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#c90058] hover:shadow-[0_0_28px_rgba(181,0,78,0.4)]"
+              >
+                Login
+              </MarketingSessionLink>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
