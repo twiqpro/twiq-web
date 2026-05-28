@@ -40,8 +40,12 @@ export function PriceOiDivergenceCard(props: {
         </span>
       </header>
 
-      <div className="mt-4 space-y-1">
-        <p className="text-sm font-semibold text-white/95">{state}</p>
+      <div className="mt-4 space-y-3">
+        <div className="inline-flex items-center gap-1.5">
+          <span className="rounded-md bg-[#b5004e] px-2 py-1 text-xs font-semibold">
+            {state}
+          </span>
+        </div>
         <p className="text-xs leading-5 text-white/75">{summary}</p>
         <p className="text-[12px] text-white/65">Window: {windowUsed}m</p>
       </div>
