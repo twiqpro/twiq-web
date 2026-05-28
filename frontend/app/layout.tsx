@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "pro insights for super traders",
-  description: "Realtime NIFTY market structure visualization for web and mobile WebView embed.",
+  title: "TWIQ — Pro insights for super traders",
+  description:
+    "TWIQ pro trading portal — realtime NIFTY structure, F&O intelligence, and market insights.",
   icons: {
     icon: "/india-flag.svg",
     shortcut: "/india-flag.svg",

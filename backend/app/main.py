@@ -22,7 +22,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     # Netlify preview/production deploys (even if CORS_ORIGINS env is stale)
-    allow_origin_regex=r"https://([a-z0-9-]+\.)*netlify\.app",
+    allow_origin_regex=r"https://([a-z0-9-]+\.)*(netlify\.app|twiq\.pro)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
