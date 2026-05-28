@@ -7,6 +7,12 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "NEXT_PUBLIC_SITE_URL": "https://twiq.pro",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://vcpqnstvrggynaqnxtmn.supabase.co",
+    "NEXT_PUBLIC_API_URL": "https://twiq-web.onrender.com",
+    "NEXT_PUBLIC_WS_URL": "wss://twiq-web.onrender.com"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

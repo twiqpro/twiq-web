@@ -6,8 +6,9 @@ import { FormEvent, useMemo, useState } from "react";
 
 import { TwiqLogo } from "@/components/TwiqLogo";
 import { PORTAL_PATHS } from "@/lib/auth/paths";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/client";
+import type { SupabasePublicConfig } from "@/lib/supabase/config";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 function authErrorMessage(message: string): string {
   const lower = message.toLowerCase();
@@ -20,14 +21,15 @@ function authErrorMessage(message: string): string {
   return message;
 }
 
-export function LoginForm() {
+export function LoginForm(props: { supabaseConfig: SupabasePublicConfig | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") ?? PORTAL_PATHS.fo;
-  const supabaseConfigured = isSupabaseConfigured();
+  const supabaseConfigured = isSupabaseConfigured(props.supabaseConfig);
   const supabase = useMemo(
-    () => (supabaseConfigured ? createClient() : null),
-    [supabaseConfigured],
+    () =>
+      props.supabaseConfig ? createClient(props.supabaseConfig) : null,
+    [props.supabaseConfig],
   );
 
   const [email, setEmail] = useState("");

@@ -6,10 +6,14 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { PORTAL_TABS, tabIdFromPathname, type PortalTabId } from "@/lib/auth/paths";
 import type { PortalUser } from "@/lib/auth/user";
+import type { SupabasePublicConfig } from "@/lib/supabase/config";
 import { TwiqLogo } from "@/components/TwiqLogo";
 import { UserProfileMenu } from "@/components/UserProfileMenu";
 
-export function TwiqTopNav(props: { user: PortalUser }) {
+export function TwiqTopNav(props: {
+  user: PortalUser;
+  supabaseConfig: SupabasePublicConfig;
+}) {
   const pathname = usePathname();
   const activeTab = tabIdFromPathname(pathname);
   const tabsRailRef = useRef<HTMLDivElement | null>(null);
@@ -108,7 +112,7 @@ export function TwiqTopNav(props: { user: PortalUser }) {
           </div>
         </div>
       </div>
-      <UserProfileMenu user={props.user} />
+      <UserProfileMenu user={props.user} supabaseConfig={props.supabaseConfig} />
     </div>
   );
 }

@@ -7,10 +7,14 @@ import { UserCircleIcon } from "@heroicons/react/24/outline";
 import { PORTAL_PATHS } from "@/lib/auth/paths";
 import type { PortalUser } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/client";
+import type { SupabasePublicConfig } from "@/lib/supabase/config";
 
-export function UserProfileMenu(props: { user: PortalUser }) {
-  const { user } = props;
-  const supabase = useMemo(() => createClient(), []);
+export function UserProfileMenu(props: {
+  user: PortalUser;
+  supabaseConfig: SupabasePublicConfig;
+}) {
+  const { user, supabaseConfig } = props;
+  const supabase = useMemo(() => createClient(supabaseConfig), [supabaseConfig]);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 

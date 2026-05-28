@@ -2,8 +2,13 @@ import { Suspense } from "react";
 
 import { LoginForm } from "@/components/LoginForm";
 import { TwiqBackground } from "@/components/TwiqBackground";
+import { resolveSupabaseConfig } from "@/lib/supabase/config";
+
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
+  const supabaseConfig = resolveSupabaseConfig();
+
   return (
     <div className="relative flex min-h-full items-center justify-center bg-black px-4 py-12 text-white">
       <TwiqBackground />
@@ -15,7 +20,7 @@ export default function LoginPage() {
             </div>
           }
         >
-          <LoginForm />
+          <LoginForm supabaseConfig={supabaseConfig} />
         </Suspense>
       </div>
     </div>

@@ -1,14 +1,18 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import {
+  resolveSupabaseConfig,
+  type SupabasePublicConfig,
+} from "@/lib/supabase/config";
 
-  if (!url || !anonKey) {
+export function createClient(config?: SupabasePublicConfig) {
+  const resolved = config ?? resolveSupabaseConfig();
+
+  if (!resolved) {
     throw new Error(
       "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
     );
   }
 
-  return createBrowserClient(url, anonKey);
+  return createBrowserClient(resolved.url, resolved.anonKey);
 }
