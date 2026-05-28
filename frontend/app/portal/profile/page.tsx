@@ -1,7 +1,9 @@
-import { requirePortalUser } from "@/lib/auth/get-portal-user";
+"use client";
 
-export default async function ProfilePage() {
-  const user = await requirePortalUser();
+import { usePortalUser } from "@/lib/auth/portal-user-context";
+
+export default function ProfilePage() {
+  const user = usePortalUser();
 
   return (
     <main className="mx-auto w-full max-w-[1440px] px-6 pb-16 pt-3">

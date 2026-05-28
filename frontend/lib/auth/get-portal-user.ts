@@ -11,6 +11,15 @@ export async function getPortalUser() {
 
   try {
     const supabase = await createClient();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      return portalUserFromSupabase(session.user);
+    }
+
     const {
       data: { user },
       error,

@@ -2,7 +2,7 @@
 
 import { ArrowLeftIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -56,7 +56,6 @@ export function AuthPanel(props: {
   supabaseConfig: SupabasePublicConfig | null;
   siteUrl: string;
 }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next") ?? PORTAL_PATHS.fo;
   const callbackError = searchParams.get("error");
@@ -167,8 +166,7 @@ export function AuthPanel(props: {
       return;
     }
 
-    router.push(redirectAfterAuth);
-    router.refresh();
+    window.location.assign(redirectAfterAuth);
   }
 
   async function handleSignUp(event: FormEvent) {
@@ -203,8 +201,7 @@ export function AuthPanel(props: {
     }
 
     if (data.session) {
-      router.push(redirectAfterAuth);
-      router.refresh();
+      window.location.assign(redirectAfterAuth);
       return;
     }
 
@@ -266,8 +263,7 @@ export function AuthPanel(props: {
     }
 
     setInfo("Password updated. Signing you in…");
-    router.push(redirectAfterAuth);
-    router.refresh();
+    window.location.assign(redirectAfterAuth);
   }
 
   async function handleResendConfirmation() {

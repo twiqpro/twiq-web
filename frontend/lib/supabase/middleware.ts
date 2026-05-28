@@ -47,13 +47,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
   } catch {
-    // Avoid taking down the site when auth refresh fails on the edge runtime.
-    if (request.nextUrl.pathname.startsWith("/portal")) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.searchParams.set("next", request.nextUrl.pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+    // Session refresh can fail on edge; let the request through — portal reads session client-side.
   }
 
   return supabaseResponse;
