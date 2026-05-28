@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { InformationCircleIcon } from "@heroicons/react/24/solid";
 import { SparklesIcon } from "@heroicons/react/24/solid";
 
@@ -35,12 +35,10 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
   const dominantNegative = gamma?.dominant_negative_strikes ?? [];
   const spotPosition = gamma?.spot_position_vs_zone ?? "Unknown";
   const regimeChangedIntraday = gamma?.regime_changed_intraday ?? false;
-  const nearNetGamma = gamma?.near_net_gamma ?? null;
   const nearNetGammaIndex = gamma?.near_net_gamma_index ?? null;
   const aboveConcentration = gamma?.gamma_concentration_above_spot ?? null;
   const belowConcentration = gamma?.gamma_concentration_below_spot ?? null;
   const aboveShare = gamma?.gamma_concentration_above_share ?? null;
-  const belowShare = gamma?.gamma_concentration_below_share ?? null;
   const highImpactStrike = gamma?.nearest_high_impact_strike ?? null;
   const strikeRows = gamma?.strike_contributions ?? [];
   const computedFlipDistancePoints =
@@ -74,81 +72,60 @@ export function GammaRegimeCard(props: { gamma?: GammaEstimate | null }) {
     aboveConcentration + belowConcentration > 0
       ? (aboveConcentration / (aboveConcentration + belowConcentration)) * 100
       : null);
-  const computedBelowShare =
-    belowShare ??
-    (aboveConcentration != null &&
-    belowConcentration != null &&
-    aboveConcentration + belowConcentration > 0
-      ? (belowConcentration / (aboveConcentration + belowConcentration)) * 100
-      : null);
-  const proInsights = useMemo(() => {
-    const fallbackInsights =
-      gamma?.insights?.length && gamma.insights.length > 0
-        ? gamma.insights
-        : ["Estimated gamma unavailable due to incomplete option-chain inputs."];
-    const points: string[] = [];
-    if (flipZone != null && flipDistancePoints != null) {
-      points.push(
-        `Nifty is ${Math.round(flipDistancePoints)} points ${
-          (gamma?.spot ?? 0) >= flipZone ? "above" : "below"
-        } the estimated gamma flip zone, so nearby moves can shift regime pressure quickly.`,
-      );
-    }
-    if (derivedPositiveStrikes.length) {
-      points.push(
-        `Positive gamma cluster is concentrated at ${derivedPositiveStrikes
-          .slice(0, 3)
-          .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
-          .join(", ")}, which suggests stabilizing pressure may persist inside this band.`,
-      );
-    }
-    if (derivedNegativeStrikes.length) {
-      points.push(
-        `Negative gamma cluster is strongest at ${derivedNegativeStrikes
-          .slice(0, 3)
-          .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
-          .join(", ")}, which can raise expansion risk if spot drifts toward that zone.`,
-      );
-    }
-    if (regimeChangedIntraday) {
-      points.push(
-        "Gamma regime has changed intraday, indicating the current stabilizing or weakening influence is less stable than earlier in session.",
-      );
-    }
-    if (!points.length) return fallbackInsights;
-    return points.slice(0, 3);
-  }, [
-    derivedNegativeStrikes,
-    derivedPositiveStrikes,
-    flipDistancePoints,
-    flipZone,
-    gamma?.spot,
-    gamma?.insights,
-    regimeChangedIntraday,
-  ]);
-  const regimeMeaning = useMemo(() => {
-    const regimeText =
-      regime === "Positive"
-        ? "Estimated positive gamma suggests options positioning may dampen sudden price movement near key strikes."
-        : regime === "Negative"
-          ? "Estimated negative gamma suggests positioning can amplify movement and increase expansion risk."
-          : regime === "Neutral"
-            ? "Estimated neutral gamma suggests stabilizing pressure is balanced and can shift quickly with fresh flow."
-            : "Gamma regime is currently unavailable due to incomplete or low-confidence strike inputs.";
-
-    const directionText =
-      direction === "Strengthening"
-        ? "The current regime pressure is strengthening, so this behavior is becoming more influential."
-        : direction === "Weakening"
-          ? "The current regime pressure is weakening, so this behavior is becoming less dominant."
-          : direction === "Stable"
-            ? "The current regime pressure is stable, so behavior is relatively consistent for now."
-            : direction === "Expansion Risk"
-              ? "Current structure indicates expansion risk, where directional moves can travel faster."
-              : "Current direction signal is not strong enough for a precise interpretation.";
-
-    return `${regimeText} ${directionText}`;
-  }, [direction, regime]);
+  const fallbackInsights =
+    gamma?.insights?.length && gamma.insights.length > 0
+      ? gamma.insights
+      : ["Estimated gamma unavailable due to incomplete option-chain inputs."];
+  const proInsightPoints: string[] = [];
+  if (flipZone != null && flipDistancePoints != null) {
+    proInsightPoints.push(
+      `Nifty is ${Math.round(flipDistancePoints)} points ${
+        (gamma?.spot ?? 0) >= flipZone ? "above" : "below"
+      } the estimated gamma flip zone, so nearby moves can shift regime pressure quickly.`,
+    );
+  }
+  if (derivedPositiveStrikes.length) {
+    proInsightPoints.push(
+      `Positive gamma cluster is concentrated at ${derivedPositiveStrikes
+        .slice(0, 3)
+        .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
+        .join(", ")}, which suggests stabilizing pressure may persist inside this band.`,
+    );
+  }
+  if (derivedNegativeStrikes.length) {
+    proInsightPoints.push(
+      `Negative gamma cluster is strongest at ${derivedNegativeStrikes
+        .slice(0, 3)
+        .map((s) => s.toLocaleString("en-IN", { maximumFractionDigits: 0 }))
+        .join(", ")}, which can raise expansion risk if spot drifts toward that zone.`,
+    );
+  }
+  if (regimeChangedIntraday) {
+    proInsightPoints.push(
+      "Gamma regime has changed intraday, indicating the current stabilizing or weakening influence is less stable than earlier in session.",
+    );
+  }
+  const proInsights =
+    proInsightPoints.length > 0 ? proInsightPoints.slice(0, 3) : fallbackInsights;
+  const regimeText =
+    regime === "Positive"
+      ? "Estimated positive gamma suggests options positioning may dampen sudden price movement near key strikes."
+      : regime === "Negative"
+        ? "Estimated negative gamma suggests positioning can amplify movement and increase expansion risk."
+        : regime === "Neutral"
+          ? "Estimated neutral gamma suggests stabilizing pressure is balanced and can shift quickly with fresh flow."
+          : "Gamma regime is currently unavailable due to incomplete or low-confidence strike inputs.";
+  const directionText =
+    direction === "Strengthening"
+      ? "The current regime pressure is strengthening, so this behavior is becoming more influential."
+      : direction === "Weakening"
+        ? "The current regime pressure is weakening, so this behavior is becoming less dominant."
+        : direction === "Stable"
+          ? "The current regime pressure is stable, so behavior is relatively consistent for now."
+          : direction === "Expansion Risk"
+            ? "Current structure indicates expansion risk, where directional moves can travel faster."
+            : "Current direction signal is not strong enough for a precise interpretation.";
+  const regimeMeaning = `${regimeText} ${directionText}`;
 
   return (
     <section className="w-full rounded-xl border border-white/10 bg-[#121212] p-4 text-white">
