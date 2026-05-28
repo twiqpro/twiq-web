@@ -1,13 +1,15 @@
 import { Suspense } from "react";
 
-import { LoginForm } from "@/components/LoginForm";
+import { AuthPanel } from "@/components/auth/AuthPanel";
 import { TwiqBackground } from "@/components/TwiqBackground";
 import { resolveSupabaseConfig } from "@/lib/supabase/config";
+import { getSiteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const supabaseConfig = resolveSupabaseConfig();
+  const siteUrl = getSiteUrl();
 
   return (
     <div className="relative flex min-h-full items-center justify-center bg-black px-4 py-12 text-white">
@@ -20,7 +22,7 @@ export default function LoginPage() {
             </div>
           }
         >
-          <LoginForm supabaseConfig={supabaseConfig} />
+          <AuthPanel supabaseConfig={supabaseConfig} siteUrl={siteUrl} />
         </Suspense>
       </div>
     </div>
