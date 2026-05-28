@@ -19,5 +19,15 @@
   ],
   "images": {
     "binding": "IMAGES"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "twiq.pro",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.twiq.pro",
+      "custom_domain": true
+    }
+  ]
 }
