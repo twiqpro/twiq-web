@@ -11,8 +11,11 @@ import { primaryCtaClass } from "./brand";
 import { HeroShaderBackdrop } from "./HeroShaderBackdrop";
 import { useReducedMotion } from "./useReducedMotion";
 
-const headline =
-  "Quant-grade AI intelligence for retail traders — all signal, no noise.";
+const headlineLines = [
+  "Quant-Grade",
+  "AI Finance Intelligence.",
+  "Built for Retail Traders.",
+] as const;
 
 const fadeUp = (delay: number, reduced: boolean) =>
   reduced
@@ -92,25 +95,30 @@ export function LandingHero(props: { supabaseConfig: SupabasePublicConfig | null
               Pro Insights for Retail Traders
             </motion.p>
 
-            <motion.h1
-              className="text-4xl font-semibold leading-[1.12] tracking-tight text-white/95 sm:text-5xl lg:text-[3.25rem]"
-              initial={reduced ? false : { opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: reduced ? 0 : 0.22,
-                ease: [0.22, 1, 0.36, 1],
-              }}
-            >
-              {headline}
-            </motion.h1>
+            <h1 className="text-4xl font-semibold leading-[1.12] tracking-tight text-white/95 sm:text-5xl lg:text-[3.25rem]">
+              {headlineLines.map((line, i) => (
+                <motion.span
+                  key={line}
+                  className="block"
+                  initial={reduced ? false : { opacity: 0, y: 22 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.5,
+                    delay: reduced ? 0 : 0.22 + i * 0.1,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                >
+                  {line}
+                </motion.span>
+              ))}
+            </h1>
 
             <motion.p
               className="mt-5 max-w-2xl text-base leading-7 text-white/65 sm:text-lg sm:leading-8"
               {...fadeUp(0.48, reduced)}
             >
-              TWIQ is your options intelligence portal — realtime charts, OI context, and
-              AI-assisted reads designed for F&amp;O desks that move fast.
+            TWIQ is your AI-powered financial intelligence platform — stocks, F&amp;O,
+            real-time OI, and macro-to-micro context for serious retail traders.
             </motion.p>
 
             <motion.div

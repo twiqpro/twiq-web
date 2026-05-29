@@ -13,14 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TWIQ — Pro insights for super traders",
+  title: "Pro Insights for Retail Traders",
   description:
-    "TWIQ pro trading portal — realtime NIFTY structure, F&O intelligence, and market insights.",
-  icons: {
-    icon: "/india-flag.svg",
-    shortcut: "/india-flag.svg",
-    apple: "/india-flag.svg",
-  },
+    "TWIQ — AI-powered financial intelligence for retail traders. Stocks, F&O, real-time OI, and macro-to-micro context.",
 };
 
 export default function RootLayout({
