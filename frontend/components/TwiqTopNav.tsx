@@ -12,7 +12,8 @@ import { UserProfileMenu } from "@/components/UserProfileMenu";
 
 export function TwiqTopNav(props: {
   user: PortalUser;
-  supabaseConfig: SupabasePublicConfig;
+  supabaseConfig: SupabasePublicConfig | null;
+  devBypass?: boolean;
 }) {
   const pathname = usePathname();
   const activeTab = tabIdFromPathname(pathname);
@@ -112,7 +113,11 @@ export function TwiqTopNav(props: {
           </div>
         </div>
       </div>
-      <UserProfileMenu user={props.user} supabaseConfig={props.supabaseConfig} />
+      <UserProfileMenu
+        user={props.user}
+        supabaseConfig={props.supabaseConfig}
+        devBypass={props.devBypass}
+      />
     </div>
   );
 }

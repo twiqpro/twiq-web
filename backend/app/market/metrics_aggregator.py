@@ -14,8 +14,10 @@ from app.feed.binary_parser import (
 )
 from app.feed.dhan_feed import FeedInstrument, REQUEST_SUBSCRIBE_QUOTE
 from app.market.metrics_compute import (
+    PcrSentiment,
     apply_oi_changes_to_rows,
     build_metrics_note,
+    classify_pcr,
     compute_estimated_gamma,
     compute_atm_iv,
     compute_max_pain,
@@ -24,7 +26,7 @@ from app.market.metrics_compute import (
     compute_price_oi_divergence,
     compute_pcr,
     format_expiry_label,
-    pcr_sentiment,
+    pcr_interpretation,
 )
 from app.market.oi_history import OiHistoryStore, StrikeOiSnapshot
 from app.market.option_chain import (
@@ -390,8 +392,14 @@ class NiftyMetricsAggregator:
         )
         rows = apply_oi_changes_to_rows(rows, changes_map)
         spot = self.spot or (rows[0].strike if rows else 0.0)
+        call_oi_total = sum(r.call_oi for r in rows)
         pcr = compute_pcr(rows)
-        sentiment = pcr_sentiment(pcr)
+        if call_oi_total <= 0:
+            sentiment = PcrSentiment(label="Unavailable")
+            pcr_interpretation_text = pcr_interpretation(pcr, sentiment)
+        else:
+            sentiment = classify_pcr(pcr)
+            pcr_interpretation_text = pcr_interpretation(pcr, sentiment)
         support, resistance = compute_oi_support_resistance(rows, spot)
         max_pain = compute_max_pain(rows)
         atm_iv = compute_atm_iv(rows, spot)
@@ -430,7 +438,9 @@ class NiftyMetricsAggregator:
             india_vix=round(self.vix_ltp, 1) if self.vix_ltp else None,
             india_vix_change=vix_change,
             pcr=pcr,
-            pcr_label=sentiment,
+            pcr_label=sentiment.label,
+            pcr_extreme_label=sentiment.extreme,
+            pcr_interpretation=pcr_interpretation_text,
             oi_support=support,
             oi_resistance=resistance,
             atm_iv=atm_iv,
@@ -443,7 +453,8 @@ class NiftyMetricsAggregator:
             note=build_metrics_note(
                 atm_iv=atm_iv,
                 india_vix=self.vix_ltp,
-                pcr_label=sentiment,
+                pcr=pcr,
+                pcr_sentiment=sentiment,
                 oi_support=support,
                 oi_resistance=resistance,
             ),

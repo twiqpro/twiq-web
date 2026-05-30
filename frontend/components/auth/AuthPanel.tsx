@@ -8,7 +8,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthInput } from "@/components/auth/AuthInput";
 import { AuthMessage } from "@/components/auth/AuthMessage";
+import { AuthPasswordInput } from "@/components/auth/AuthPasswordInput";
+import {
+  authLabelClass,
+  authMutedTextClass,
+  authSecondaryLinkClass,
+  authSecondaryTextClass,
+} from "@/components/auth/authStyles";
 import { authErrorMessage } from "@/lib/auth/errors";
+import { isLocalAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 import { PORTAL_PATHS } from "@/lib/auth/paths";
 import { safePortalPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/client";
@@ -26,18 +34,30 @@ type AuthView =
 
 type CheckEmailReason = "signup" | "reset" | "verify";
 
-const inputClass =
-  "w-full rounded-md border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none ring-[#b5004e]/40 focus:border-[#b5004e]/60 focus:ring-2";
-
 function primaryButtonClass(loading: boolean) {
   return [
-    "w-full rounded-full bg-[#b5004e] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c90058]",
-    loading ? "opacity-60" : "",
+    "w-full rounded-full bg-[#b5004e] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c90058] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+    loading ? "cursor-not-allowed opacity-60" : "",
   ].join(" ");
 }
 
 function linkButtonClass() {
-  return "text-sm font-medium text-[#eb2f96] hover:text-[#ff4da6]";
+  return authSecondaryLinkClass;
+}
+
+function textButtonClass() {
+  return [
+    "flex w-full items-center justify-center gap-1.5 py-2",
+    authSecondaryTextClass,
+    "hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6eb4]",
+  ].join(" ");
+}
+
+function inlineLinkClass() {
+  return [
+    "text-xs font-medium text-[#ff6eb4] hover:text-[#ff8ac7]",
+    "focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6eb4]",
+  ].join(" ");
 }
 
 function parseInitialView(mode: string | null): AuthView {
@@ -295,19 +315,40 @@ export function AuthPanel(props: {
   }
 
   const backHome = (
-    <p className="mt-6 text-center text-xs text-white/45">
-      <Link href="/" className="text-white/65 hover:text-white">
+    <p className={`mt-6 text-center ${authMutedTextClass}`}>
+      <Link
+        href="/"
+        className={`${authSecondaryTextClass} hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6eb4]`}
+      >
         ← Back to home
       </Link>
     </p>
   );
 
   if (!supabase) {
+    const devBypass = isLocalAuthBypassEnabled();
+
     return (
       <AuthCard title="Sign in to TWIQ" subtitle="Account access for TWIQ portal.">
-        <AuthMessage tone="error">
-          Auth is not configured on this deployment yet.
-        </AuthMessage>
+        <div className="mt-8 space-y-4">
+          <AuthMessage tone="error">
+            Auth is not configured on this deployment yet.
+          </AuthMessage>
+          {devBypass ? (
+            <AuthMessage tone="info">
+              Local dev mode is active. You can open the portal without signing in
+              to work on UI changes.
+            </AuthMessage>
+          ) : null}
+          {devBypass ? (
+            <Link
+              href={PORTAL_PATHS.fo}
+              className={`${primaryButtonClass(false)} inline-block text-center`}
+            >
+              Open F &amp; O portal (local dev)
+            </Link>
+          ) : null}
+        </div>
         {backHome}
       </AuthCard>
     );
@@ -337,7 +378,7 @@ export function AuthPanel(props: {
       <AuthCard title={copy.title} subtitle={copy.subtitle} footer={backHome}>
         <div className="mt-8 space-y-4">
           <div className="flex justify-center">
-            <EnvelopeIcon className="h-10 w-10 text-[#eb2f96]/80" aria-hidden />
+            <EnvelopeIcon className="h-10 w-10 text-[#ff6eb4]" aria-hidden />
           </div>
           <AuthMessage tone="info">{copy.body}</AuthMessage>
           {info ? <AuthMessage tone="success">{info}</AuthMessage> : null}
@@ -365,7 +406,7 @@ export function AuthPanel(props: {
             <button
               type="button"
               onClick={() => goTo("sign-in")}
-              className="flex w-full items-center justify-center gap-1.5 py-2 text-sm text-white/60 hover:text-white"
+              className={textButtonClass()}
             >
               <ArrowLeftIcon className="h-4 w-4" aria-hidden />
               Back to sign in
@@ -419,7 +460,7 @@ export function AuthPanel(props: {
           <button
             type="button"
             onClick={() => goTo("forgot-password")}
-            className="w-full py-1 text-center text-sm text-white/55 hover:text-white/80"
+            className={`w-full py-1 text-center ${authSecondaryTextClass} hover:text-white focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff6eb4]`}
           >
             Request a new reset link
           </button>
@@ -452,7 +493,7 @@ export function AuthPanel(props: {
           <button
             type="button"
             onClick={() => goTo("sign-in")}
-            className="flex w-full items-center justify-center gap-1.5 py-2 text-sm text-white/60 hover:text-white"
+            className={textButtonClass()}
           >
             <ArrowLeftIcon className="h-4 w-4" aria-hidden />
             Back to sign in
@@ -504,7 +545,7 @@ export function AuthPanel(props: {
           <button type="submit" disabled={loading} className={primaryButtonClass(loading)}>
             {loading ? "Creating account…" : "Create account"}
           </button>
-          <p className="text-center text-sm text-white/55">
+          <p className={`text-center ${authSecondaryTextClass}`}>
             Already have an account?{" "}
             <button
               type="button"
@@ -533,25 +574,22 @@ export function AuthPanel(props: {
         />
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label htmlFor="password" className="text-xs text-white/65">
+            <label htmlFor="password" className={authLabelClass}>
               Password
             </label>
             <button
               type="button"
               onClick={() => goTo("forgot-password")}
-              className="text-xs text-[#eb2f96] hover:text-[#ff4da6]"
+              className={inlineLinkClass()}
             >
               Forgot password?
             </button>
           </div>
-          <input
+          <AuthPasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
-            required
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className={inputClass}
+            onChange={setPassword}
             placeholder="••••••••"
           />
         </div>
@@ -591,7 +629,7 @@ export function AuthPanel(props: {
           {loading ? "Signing in…" : "Sign in"}
         </button>
 
-        <p className="text-center text-sm text-white/55">
+        <p className={`text-center ${authSecondaryTextClass}`}>
           New to TWIQ?{" "}
           <button
             type="button"

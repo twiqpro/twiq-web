@@ -44,6 +44,8 @@ export type NiftyMetrics = {
   india_vix_change: number | null;
   pcr: number;
   pcr_label: string;
+  pcr_extreme_label?: string | null;
+  pcr_interpretation?: string;
   oi_support: number | null;
   oi_resistance: number | null;
   atm_iv: number | null;

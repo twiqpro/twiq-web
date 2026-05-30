@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { AuthPanel } from "@/components/auth/AuthPanel";
+import { authCardClass } from "@/components/auth/authStyles";
 import { TwiqBackground } from "@/components/TwiqBackground";
 import { resolveSupabaseConfig } from "@/lib/supabase/config";
 import { getSiteUrl } from "@/lib/site";
@@ -14,10 +15,10 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-[100dvh] items-center justify-center bg-black px-4 py-12 text-white">
       <TwiqBackground />
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-[25.2rem]">
         <Suspense
           fallback={
-            <div className="rounded-[8px] border border-white/10 bg-[#121212] p-8 text-center text-sm text-white/60">
+            <div className={`${authCardClass} text-center text-sm text-neutral-300`}>
               Loading…
             </div>
           }

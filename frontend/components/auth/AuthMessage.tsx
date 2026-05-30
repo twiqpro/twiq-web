@@ -3,14 +3,14 @@ export function AuthMessage(props: {
   children: React.ReactNode;
 }) {
   const styles = {
-    error: "bg-rose-500/10 text-rose-300",
-    success: "bg-emerald-500/10 text-emerald-300",
-    info: "bg-white/5 text-white/70",
+    error: "border border-rose-800 bg-rose-950 text-rose-200",
+    success: "border border-emerald-800 bg-emerald-950 text-emerald-200",
+    info: "border border-neutral-700 bg-neutral-900 text-neutral-200",
   };
 
   return (
     <p
-      className={`rounded-md px-3 py-2 text-sm ${styles[props.tone]}`}
+      className={`rounded-md border px-3 py-2 text-sm ${styles[props.tone]}`}
       role={props.tone === "error" ? "alert" : "status"}
     >
       {props.children}

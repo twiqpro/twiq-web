@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PortalShell } from "@/components/PortalShell";
+import { isLocalAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 import { loginUrlWithNext } from "@/lib/auth/safe-redirect";
 import { resolveSupabaseConfig } from "@/lib/supabase/config";
 
@@ -11,8 +12,9 @@ export default async function PortalLayout(props: {
   children: React.ReactNode;
 }) {
   const supabaseConfig = resolveSupabaseConfig();
+  const devBypass = isLocalAuthBypassEnabled();
 
-  if (!supabaseConfig) {
+  if (!supabaseConfig && !devBypass) {
     const headerStore = await headers();
     const pathname =
       headerStore.get("x-pathname") ??
@@ -22,6 +24,8 @@ export default async function PortalLayout(props: {
   }
 
   return (
-    <PortalShell supabaseConfig={supabaseConfig}>{props.children}</PortalShell>
+    <PortalShell supabaseConfig={supabaseConfig} devBypass={devBypass}>
+      {props.children}
+    </PortalShell>
   );
 }

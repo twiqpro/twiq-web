@@ -1,5 +1,10 @@
 import { InformationCircleIcon, SparklesIcon } from "@heroicons/react/24/solid";
 
+import {
+  fallbackPcrInterpretation,
+  PCR_TOOLTIP_COPY,
+} from "@/lib/pcrSentiment";
+
 type Stat = {
   label: string;
   value: string;
@@ -30,22 +35,30 @@ export function MetricsCard(props: {
   pcrLabel: string;
   pcrValue: number;
   pcrSentiment: string;
+  pcrInterpretation?: string;
   expiryLabel: string;
   columns: Stat[][];
   note: string;
 }) {
-  const { pcrLabel, pcrValue, pcrSentiment, expiryLabel, columns, note } = props;
-  const pcrInterpretation = (() => {
-    if (pcrValue > 1.2) return "Market positioning is strongly bullish.";
-    if (pcrValue < 0.8) return "Market positioning is strongly bearish.";
-    if (pcrValue > 1.0) {
-      return "Market positioning is relatively neutral with a slight bullish tilt.";
-    }
-    if (pcrValue < 1.0) {
-      return "Market positioning is relatively neutral with a slight bearish tilt.";
-    }
-    return "Market positioning is relatively neutral.";
-  })();
+  const {
+    pcrLabel,
+    pcrValue,
+    pcrSentiment,
+    pcrInterpretation,
+    expiryLabel,
+    columns,
+    note,
+  } = props;
+
+  const baseLabel = pcrSentiment.split(" · ")[0] ?? pcrSentiment;
+  const extremeLabel = pcrSentiment.includes(" · ")
+    ? pcrSentiment.split(" · ").slice(1).join(" · ")
+    : null;
+
+  const interpretation =
+    pcrInterpretation?.trim() ||
+    fallbackPcrInterpretation(pcrValue, baseLabel, extremeLabel);
+
   const pointers = note
     .replace(/[“”"]/g, "")
     .split(/\n+/)
@@ -70,17 +83,18 @@ export function MetricsCard(props: {
             >
               <InformationCircleIcon className="h-4 w-4" />
             </button>
-            <span className="pointer-events-none absolute left-1/2 top-[125%] z-20 w-64 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-              PCR (Put-Call Ratio) shows market positioning based on options Open
-              Interest.
+            <span className="pointer-events-none absolute left-1/2 top-[125%] z-20 w-72 -translate-x-1/2 rounded-md border border-white/10 bg-[#121212] px-2 py-1.5 text-left text-[10px] leading-4 text-white/85 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              {PCR_TOOLTIP_COPY.split("\n").map((line, idx) => (
+                <span key={idx}>
+                  {line}
+                  {idx < PCR_TOOLTIP_COPY.split("\n").length - 1 ? <br /> : null}
+                </span>
+              ))}
               <br />
               <br />
-              Higher PCR → More bullish positioning
-              <br />
-              Lower PCR → More bearish positioning
-              <br />
-              <br />
-              Current PCR: {pcrValue.toFixed(2)} ({pcrSentiment}) → {pcrInterpretation}
+              Current PCR:{" "}
+              {baseLabel === "Unavailable" ? "—" : pcrValue.toFixed(2)} (
+              {pcrSentiment}) → {interpretation}
             </span>
           </span>
         </div>
@@ -133,4 +147,3 @@ export function MetricsCard(props: {
     </section>
   );
 }
-

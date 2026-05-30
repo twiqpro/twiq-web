@@ -7,6 +7,7 @@ import { GammaRegimeCard } from "@/components/GammaRegimeCard";
 import { PriceOiDivergenceCard } from "@/components/PriceOiDivergenceCard";
 import { useNiftyMetrics } from "@/hooks/useNiftyMetrics";
 import type { OIProfileStrike } from "@/lib/chartTypes";
+import { formatPcrBadge } from "@/lib/pcrSentiment";
 
 type Stat = {
   label: string;
@@ -36,6 +37,8 @@ function vixDelta(
 function metricsToCards(metrics: {
   pcr: number;
   pcr_label: string;
+  pcr_extreme_label?: string | null;
+  pcr_interpretation?: string;
   expiry_label: string;
   spot: number;
   oi_support: number | null;
@@ -48,9 +51,16 @@ function metricsToCards(metrics: {
   note: string;
 }) {
   return {
-    pcrLabel: `PCR : ${metrics.pcr} (${metrics.pcr_label})`,
+    pcrLabel: formatPcrBadge(
+      metrics.pcr,
+      metrics.pcr_label,
+      metrics.pcr_extreme_label,
+    ),
     pcrValue: metrics.pcr,
-    pcrSentiment: metrics.pcr_label,
+    pcrSentiment: metrics.pcr_extreme_label
+      ? `${metrics.pcr_label} · ${metrics.pcr_extreme_label}`
+      : metrics.pcr_label,
+    pcrInterpretation: metrics.pcr_interpretation ?? "",
     expiryLabel: `Expiry : ${metrics.expiry_label}`,
     columns: [
       [

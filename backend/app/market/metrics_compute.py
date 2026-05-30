@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from math import exp, log, pi, sqrt
 from typing import Iterable, Optional
@@ -19,6 +20,74 @@ from app.models.metrics import (
 
 IST = ZoneInfo("Asia/Kolkata")
 
+PCR_PUT_HEAVY = 1.2
+PCR_BALANCED_LOW = 0.8
+PCR_EXTREME_PUT = 1.5
+PCR_EXTREME_CALL = 0.5
+
+
+@dataclass(frozen=True)
+class PcrSentiment:
+    """OI-based PCR positioning with optional contrarian extreme signal."""
+
+    label: str
+    extreme: Optional[str] = None
+
+    @property
+    def display_label(self) -> str:
+        if self.extreme:
+            return f"{self.label} · {self.extreme}"
+        return self.label
+
+
+def classify_pcr(pcr: float) -> PcrSentiment:
+    """
+    OI-based PCR logic (put writing / call writing interpretation).
+
+    PCR > 1.2  → more puts written → Bullish
+    0.8–1.2    → Neutral / sideways
+    PCR < 0.8  → more calls written → Bearish
+
+    Extremes (contrarian):
+    PCR > 1.5  → excessive put writing → Reversal Down
+    PCR < 0.5  → excessive call writing → Reversal Up
+    """
+    if pcr > PCR_EXTREME_PUT:
+        return PcrSentiment(label="Bullish", extreme="Reversal Down")
+    if pcr > PCR_PUT_HEAVY:
+        return PcrSentiment(label="Bullish")
+    if pcr >= PCR_BALANCED_LOW:
+        return PcrSentiment(label="Neutral")
+    if pcr >= PCR_EXTREME_CALL:
+        return PcrSentiment(label="Bearish")
+    return PcrSentiment(label="Bearish", extreme="Reversal Up")
+
+
+def pcr_interpretation(pcr: float, sentiment: PcrSentiment) -> str:
+    if sentiment.label == "Unavailable":
+        return "PCR is unavailable until option-chain open interest loads."
+
+    if sentiment.extreme == "Reversal Down":
+        return (
+            "More puts written than calls (bullish OI), but excessive put "
+            "writing may signal overconfidence and a possible reversal down."
+        )
+    if sentiment.extreme == "Reversal Up":
+        return (
+            "More calls written than puts (bearish OI), but excessive call "
+            "writing may signal overconfidence and a possible reversal up."
+        )
+    if sentiment.label == "Bullish":
+        return "More puts written than calls — bullish OI positioning."
+    if sentiment.label == "Bearish":
+        return "More calls written than puts — bearish OI positioning."
+    return "Put and call open interest are broadly balanced — neutral sideways positioning."
+
+
+def pcr_sentiment(pcr: float) -> str:
+    """Backward-compatible display label for callers expecting a string."""
+    return classify_pcr(pcr).display_label
+
 
 def format_expiry_label(expiry_iso: str) -> str:
     """YYYY-MM-DD -> '26th June'."""
@@ -32,14 +101,6 @@ def format_expiry_label(expiry_iso: str) -> str:
     elif day % 10 == 3 and day != 13:
         suffix = "rd"
     return f"{day}{suffix} {dt.strftime('%B')}"
-
-
-def pcr_sentiment(pcr: float) -> str:
-    if pcr < 0.8:
-        return "Bullish"
-    if pcr > 1.2:
-        return "Bearish"
-    return "Neutral"
 
 
 def compute_pcr(rows: Iterable[OIStrikeRow]) -> float:
@@ -187,7 +248,8 @@ def build_metrics_note(
     *,
     atm_iv: Optional[float],
     india_vix: Optional[float],
-    pcr_label: str,
+    pcr: float,
+    pcr_sentiment: PcrSentiment,
     oi_support: Optional[float],
     oi_resistance: Optional[float],
 ) -> str:
@@ -203,9 +265,10 @@ def build_metrics_note(
             f"{'elevated' if india_vix > 15 else 'subdued'} volatility expectations."
         )
     if oi_support is not None and oi_resistance is not None:
+        pcr_copy = pcr_interpretation(pcr, pcr_sentiment)
         parts.append(
-            f"Market sentiment is {pcr_label.lower()} with OI support near "
-            f"{oi_support:.0f} and resistance near {oi_resistance:.0f}."
+            f"PCR at {pcr:.2f} ({pcr_sentiment.display_label}): {pcr_copy} "
+            f"OI support near {oi_support:.0f} and resistance near {oi_resistance:.0f}."
         )
     return "\n\n".join(parts) if parts else "Live NIFTY options metrics."
 

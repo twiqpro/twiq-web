@@ -35,7 +35,7 @@ export function ChartToolbar(props: {
       ? "bg-[#26a69a] text-[#041312]"
       : trend?.regime === "Bearish"
         ? "bg-[#ef5350] text-[#250606]"
-        : "bg-[#FFCC01] text-[#191300]";
+        : "border border-[#FFCC01]/25 bg-[#FFCC01]/15 text-[#F0D060]";
   const trendLabel = trend?.regime ?? "Sideways";
   const [intervalOpen, setIntervalOpen] = useState(false);
   const intervalMenuRef = useRef<HTMLDivElement>(null);

@@ -96,6 +96,8 @@ class NiftyMetricsSnapshot(BaseModel):
     india_vix_change: Optional[float] = None
     pcr: float
     pcr_label: str
+    pcr_extreme_label: Optional[str] = None
+    pcr_interpretation: str = ""
     oi_support: Optional[float] = None
     oi_resistance: Optional[float] = None
     atm_iv: Optional[float] = None

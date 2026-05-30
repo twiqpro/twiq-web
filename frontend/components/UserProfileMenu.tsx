@@ -11,10 +11,14 @@ import type { SupabasePublicConfig } from "@/lib/supabase/config";
 
 export function UserProfileMenu(props: {
   user: PortalUser;
-  supabaseConfig: SupabasePublicConfig;
+  supabaseConfig: SupabasePublicConfig | null;
+  devBypass?: boolean;
 }) {
-  const { user, supabaseConfig } = props;
-  const supabase = useMemo(() => createClient(supabaseConfig), [supabaseConfig]);
+  const { user, supabaseConfig, devBypass } = props;
+  const supabase = useMemo(
+    () => (supabaseConfig ? createClient(supabaseConfig) : null),
+    [supabaseConfig],
+  );
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +34,11 @@ export function UserProfileMenu(props: {
   }, [open]);
 
   async function handleLogout() {
+    if (devBypass || !supabase) {
+      window.location.href = "/";
+      return;
+    }
+
     await supabase.auth.signOut();
     window.location.href = "/";
   }

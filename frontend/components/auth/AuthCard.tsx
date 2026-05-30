@@ -1,5 +1,9 @@
 import { TwiqLogo } from "@/components/TwiqLogo";
 
+import { authCardClass, authSubtitleClass } from "@/components/auth/authStyles";
+
+export { authCardClass };
+
 export function AuthCard(props: {
   title: string;
   subtitle?: string;
@@ -7,15 +11,15 @@ export function AuthCard(props: {
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="w-full max-w-md rounded-[8px] border border-white/10 bg-[#121212] p-8 shadow-2xl">
+    <div className={authCardClass}>
       <div className="mb-8 flex justify-center">
         <TwiqLogo />
       </div>
-      <h1 className="text-center text-xl font-semibold text-white/95">
+      <h1 className="text-center text-xl font-semibold text-white">
         {props.title}
       </h1>
       {props.subtitle ? (
-        <p className="mt-2 text-center text-sm text-white/60">{props.subtitle}</p>
+        <p className={authSubtitleClass}>{props.subtitle}</p>
       ) : null}
       {props.children}
       {props.footer}
