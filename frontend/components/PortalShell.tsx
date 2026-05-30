@@ -32,12 +32,13 @@ export function PortalShell(props: {
       return;
     }
 
+    const authClient = supabase;
     let cancelled = false;
 
     async function loadSession() {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await authClient.auth.getSession();
 
       if (cancelled) return;
 
@@ -58,7 +59,7 @@ export function PortalShell(props: {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = authClient.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
         window.location.replace(
           loginUrlWithNext(window.location.pathname),
